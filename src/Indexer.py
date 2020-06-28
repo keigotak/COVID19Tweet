@@ -1,0 +1,102 @@
+
+
+class Indexer:
+    def __init__(self, special_tokens={'<s>': 0, '<unk>': 1, '<pad>': 2, '<\s>': 3, '<mask>': 4}, with_lower_case=True, lower_count=10):
+        if special_tokens is None:
+            self.word2index = {'<unk>': 0, '<pad>': 1}
+            self.current = 2
+        else:
+            self.word2index = special_tokens
+            self.current = len(special_tokens)
+        self.index2word = {val: key for key, val in special_tokens.items()}
+        self.vocab = set([key for key, val in special_tokens.items()])
+
+        self.padding_index = self.word2index['<pad>']
+        self.unknown_index = self.word2index['<unk>']
+
+        self.with_lower_case = with_lower_case
+        self.delim = ' '
+        self.counts = {}
+        self.lower_count = lower_count
+
+    def __len__(self):
+        return self.current
+
+    def count_word(self, word):
+        if self.with_lower_case:
+            word = word.lower()
+        if word not in self.counts.keys():
+            self.counts[word] = 1
+        else:
+            self.counts[word] += 1
+
+    def count_word_in_sentence(self, sentence):
+        for word in sentence.split(self.delim):
+            self.count_word(word)
+
+    def count_word_in_text(self, text):
+        for sentence in text:
+            self.count_word_in_sentence(sentence)
+
+    def add_word(self, word):
+        if self.with_lower_case:
+            word = word.lower()
+        if word in self.counts.keys() and self.counts[word] < self.lower_count:
+            return
+        if word not in self.vocab:
+            self.word2index[word] = self.current
+            self.index2word[self.current] = word
+            self.vocab.add(word)
+            self.current += 1
+
+    def add_sentence(self, sentence):
+        for word in sentence.split(self.delim):
+            self.add_word(word)
+
+    def add_sentences(self, sentences):
+        for sentence in sentences:
+            self.add_sentence(sentence)
+
+    def get_index(self, word):
+        if self.with_lower_case:
+            word = word.lower()
+        if word in self.vocab:
+            return self.word2index[word]
+        else:
+            return self.unknown_index
+
+    def sentence_to_index(self, sentence):
+        return [self.get_index(word) for word in sentence]
+
+    def text_to_index(self, text):
+        return [[self.get_index(word) for word in sentence.split(self.delim)] for sentence in text]
+
+    def get_word(self, index):
+        if index in self.index2word.keys():
+            return self.index2word[index]
+        else:
+            return self.index2word[self.unknown_index]
+
+    def sentence_to_words(self, indexes):
+        return [self.get_word(index) for index in indexes]
+
+    def text_to_words(self, index_text):
+        return [[self.get_word(index) for index in indexes] for indexes in index_text]
+
+
+if __name__ == '__main__':
+    indexer = Indexer()
+    from HelperFunctions import get_datasets
+    datasets, tags = get_datasets()
+    sentences = [pairs[0] for pairs in datasets['train']]
+    indexer.count_word_in_text(sentences)
+    indexer.add_sentences(sentences)
+    sentences = [pairs[0] for pairs in datasets['valid']]
+    indexes = indexer.text_to_index(sentences)
+    unk_count = 0
+    for sentence, index in zip(sentences, indexes):
+        for word, id in zip(sentence.split(' '), index):
+            if id == indexer.unknown_index:
+                print('{}({})'.format(word, id))
+                unk_count += 1
+    print(unk_count)
