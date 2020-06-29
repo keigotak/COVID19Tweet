@@ -4,25 +4,31 @@ import torch.nn as nn
 from RawEmbedding import RawEmbedding
 from Attention import Attention
 
+from Batcher import Batcher
+
 
 class BiGruSelfattention(nn.Module):
-    def __init(self):
+    def __init__(self):
         super(BiGruSelfattention, self).__init__()
         self.embedding = RawEmbedding()
         emb_dim = self.embedding.embedding_dim
-        self.f_rnn1 = nn.GRU(input_size=emb_dim, hidden_dim=emb_dim, batch_first=True)
-        self.b_rnn1 = nn.GRU(input_size=emb_dim, hidden_dim=emb_dim, batch_first=True)
-        self.f_rnn2 = nn.GRU(input_size=emb_dim, hidden_dim=emb_dim, batch_first=True)
-        self.b_rnn2 = nn.GRU(input_size=emb_dim, hidden_dim=emb_dim, batch_first=True)
-        self.attention = Attention(dimentions=emb_dim)
+        self.f_gru1 = nn.GRU(input_size=emb_dim, hidden_size=emb_dim, batch_first=True)
+        self.b_gru1 = nn.GRU(input_size=emb_dim, hidden_size=emb_dim, batch_first=True)
+        self.f_gru2 = nn.GRU(input_size=emb_dim, hidden_size=emb_dim, batch_first=True)
+        self.b_gru2 = nn.GRU(input_size=emb_dim, hidden_size=emb_dim, batch_first=True)
+        self.attention = Attention(dimensions=emb_dim)
+        self.hidden_size = emb_dim
 
         self.dropout1 = nn.Dropout(0.2)
         self.dropout2 = nn.Dropout(0.2)
         self.dropout3 = nn.Dropout(0.2)
 
+        self.pooling = nn.AdaptiveAvgPool1d(1)
+        self.output = nn.Linear(emb_dim, 1)
+
     def forward(self, batch_sentence):
         embeddings = self.embedding(batch_sentence)
-        max_len = max(map(len, batch_sentence))
+        max_len = embeddings.shape[1]
 
         outf1, hidf1 = self.f_gru1(self.dropout1(embeddings))
         resf1 = outf1 + embeddings
@@ -40,25 +46,36 @@ class BiGruSelfattention(nn.Module):
         resb2 = outb2 + rev_resf2
         rev_resb2 = resb2[:,torch.arange(max_len-1, -1, -1),:] # not reversed
 
-        outf3, hidf3 = self.f_gru3(self.dropout3(rev_resb2))
-        resf3 = outf3 + rev_resb2
-        rev_resf3 = resf3[:,torch.arange(max_len-1, -1, -1),:] # reversed
+        drop_output = self.dropout3(rev_resb2)
+        seq_logits, attention_weights = self.attention(query=drop_output, context=drop_output)
 
-        outb3, hidb3 = self.b_gru3(self.dropout3(rev_resf3))
-        resb3 = outb3 + rev_resf3
-        rev_resb3 = resb3[:,torch.arange(max_len-1, -1, -1),:] # not reversed
-
-        drop_output = self.dropout4(rev_resb3)
-        # flat_output = torch.flatten(drop_output, start_dim=1)
-        classified_logits, seq_logits, attention_weights = self.attention(query=drop_output, context=drop_output)
-
-        return classified_logits
+        pooled_logits = self.pooling(seq_logits.transpose(2, 1)).transpose(2, 1).squeeze()
+        output = self.output(pooled_logits)
+        return output
 
 
 if __name__ == '__main__':
     from HelperFunctions import get_datasets
     datasets, tags = get_datasets()
-    sentences = [pairs[0] for pairs in datasets['train']]
-    model = BiGruSelfattention()
-    model(sentences)
+    train_batcher = Batcher(x=[pairs[0] for pairs in datasets['train']], y=[pairs[1] for pairs in datasets['train']])
+    valid_batcher = Batcher(x=[pairs[0] for pairs in datasets['valid']], y=[pairs[1] for pairs in datasets['valid']])
 
+    model = BiGruSelfattention()
+    print(model)
+
+    criterion = nn.BCEWithLogitsLoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.02)
+    model.train()
+    epochs = 100
+    for e in range(epochs):
+        running_loss = 0.0
+        while not train_batcher.is_batch_end():
+            optimizer.zero_grad()
+            x_batch, y_batch = train_batcher.get_batch()
+            outputs = model(x_batch)
+            labels = torch.Tensor(y_batch).float().unsqueeze(1)
+            loss = criterion(outputs, labels)
+            optimizer.step()
+            running_loss += loss.item()
+        train_batcher.reset(with_shuffle=True)
+        print('loss: {}'.format(running_loss))
