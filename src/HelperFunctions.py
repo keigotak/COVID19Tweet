@@ -1,4 +1,10 @@
 from pathlib import Path
+from datetime import datetime
+
+
+def get_now():
+    dt_now = datetime.now()
+    return dt_now.strftime('%Y.%m.%d %H:%M:%S')
 
 
 def get_label(text):
@@ -57,6 +63,7 @@ def generate_vocabjson():
             word = text.strip().split(' ')[0]
             f.write('"{}": "{}",\n'.format(word, count))
             count += 1
+
 
 
 
