@@ -15,13 +15,16 @@ class BiGruSelfattention(nn.Module):
     def __init__(self, device='cpu'):
         super(BiGruSelfattention, self).__init__()
         self.embedding = RawEmbedding(device=device)
+
         emb_dim = self.embedding.embedding_dim
+        self.hidden_size = emb_dim
         self.f_gru1 = nn.GRU(input_size=emb_dim, hidden_size=emb_dim, batch_first=True)
         self.b_gru1 = nn.GRU(input_size=emb_dim, hidden_size=emb_dim, batch_first=True)
         self.f_gru2 = nn.GRU(input_size=emb_dim, hidden_size=emb_dim, batch_first=True)
         self.b_gru2 = nn.GRU(input_size=emb_dim, hidden_size=emb_dim, batch_first=True)
-        self.attention = Attention(dimensions=emb_dim)
-        self.hidden_size = emb_dim
+
+        self.num_head = 8
+        self.attention = nn.ModuleList([Attention(dimensions=emb_dim) for _ in range(self.num_head)])
 
         self.dropout1 = nn.Dropout(0.2)
         self.dropout2 = nn.Dropout(0.2)
@@ -54,9 +57,20 @@ class BiGruSelfattention(nn.Module):
         rev_resb2 = resb2[:,torch.arange(max_len-1, -1, -1),:] # not reversed
 
         drop_output = self.dropout3(rev_resb2)
-        seq_logits, attention_weights = self.attention(query=drop_output, context=drop_output)
+        seq_logits, attention_weights = [], []
+        for i in range(self.num_head):
+            l, w = self.attention[i](query=drop_output, context=drop_output)
+            seq_logits.append(l)
+            attention_weights.append(w)
+        avg_seq_logits = None
+        for l in seq_logits:
+            if avg_seq_logits is None:
+                avg_seq_logits = l
+            else:
+                avg_seq_logits = avg_seq_logits + l
+        avg_seq_logits /= self.num_head
 
-        pooled_logits = self.pooling(seq_logits.transpose(2, 1)).transpose(2, 1).squeeze()
+        pooled_logits = self.pooling(avg_seq_logits.transpose(2, 1)).transpose(2, 1).squeeze()
         output = self.output(pooled_logits)
         return output
 
@@ -76,7 +90,7 @@ if __name__ == '__main__':
             print(parameter)
 
     criterion = nn.BCEWithLogitsLoss()
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.2)
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
 
     TRAIN_MODE, VALID_MODE = 'train', 'valid'
     batchers = {TRAIN_MODE: train_batcher, VALID_MODE: valid_batcher}
