@@ -1,5 +1,6 @@
 from pathlib import Path
 from datetime import datetime
+from TweetNormalizer import normalizeTweet
 
 
 def get_now():
@@ -35,7 +36,7 @@ def get_datasets():
     modified_datasets = {tag: [] for tag in tags}
     for tag in tags:
         for line in datasets[tag]:
-            modified_datasets[tag].append([line[1], get_label(line[2])])
+            modified_datasets[tag].append([normalizeTweet(line[1]), get_label(line[2])])
     return modified_datasets, tags
 
 
