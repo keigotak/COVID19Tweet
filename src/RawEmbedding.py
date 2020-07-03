@@ -32,4 +32,4 @@ class RawEmbedding(nn.Module):
 
 
 if __name__ == '__main__':
-    ne = RawEmbedding()
+    ne = RawEmbedding(device='cpu')
