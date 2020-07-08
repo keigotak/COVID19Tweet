@@ -1,3 +1,8 @@
+from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
+from ekphrasis.classes.preprocessor import TextPreProcessor
+from ekphrasis.classes.tokenizer import SocialTokenizer
+from ekphrasis.dicts.emoticons import emoticons
 
 
 class Indexer:
@@ -18,6 +23,37 @@ class Indexer:
         self.delim = ' '
         self.counts = {}
         self.lower_count = lower_count
+        self.stop_words = set(stopwords.words('english'))
+
+        self.text_processor = TextPreProcessor(
+            # terms that will be normalized
+            normalize=['url', 'email', 'percent', 'money', 'phone', 'user',
+                       'time', 'url', 'date', 'number'],
+            # terms that will be annotated
+            annotate={"hashtag", "allcaps", "elongated", "repeated",
+                      'emphasis', 'censored'},
+            fix_html=True,  # fix HTML tokens
+
+            # corpus from which the word statistics are going to be used
+            # for word segmentation
+            segmenter="twitter",
+
+            # corpus from which the word statistics are going to be used
+            # for spell correction
+            corrector="twitter",
+
+            unpack_hashtags=True,  # perform word segmentation on hashtags
+            unpack_contractions=True,  # Unpack contractions (can't -> can not)
+            spell_correct_elong=False,  # spell correction for elongated words
+
+            # select a tokenizer. You can use SocialTokenizer, or pass your own
+            # the tokenizer, should take as input a string and return a list of tokens
+            tokenizer=SocialTokenizer(lowercase=True).tokenize,
+
+            # list of dictionaries, for replacing tokens extracted from the text,
+            # with other expressions. You can pass more than one dictionaries.
+            dicts=[emoticons]
+        )
 
     def __len__(self):
         return self.current
@@ -25,13 +61,15 @@ class Indexer:
     def count_word(self, word):
         if self.with_lower_case:
             word = word.lower()
+        if word in self.stop_words:
+            return
         if word not in self.counts.keys():
             self.counts[word] = 1
         else:
             self.counts[word] += 1
 
     def count_word_in_sentence(self, sentence):
-        for word in sentence.split(self.delim):
+        for word in self.text_processor.pre_process_doc(sentence):
             self.count_word(word)
 
     def count_word_in_text(self, text):
@@ -43,6 +81,8 @@ class Indexer:
             word = word.lower()
         if word in self.counts.keys() and self.counts[word] < self.lower_count:
             return
+        if word in self.stop_words:
+            return
         if word not in self.vocab:
             self.word2index[word] = self.current
             self.index2word[self.current] = word
@@ -50,7 +90,7 @@ class Indexer:
             self.current += 1
 
     def add_sentence(self, sentence):
-        for word in sentence.split(self.delim):
+        for word in self.text_processor.pre_process_doc(sentence):
             self.add_word(word)
 
     def add_sentences(self, sentences):
@@ -66,10 +106,10 @@ class Indexer:
             return self.unknown_index
 
     def sentence_to_index(self, sentence):
-        return [self.get_index(word) for word in sentence]
+        return [self.get_index(word) for word in self.text_processor.pre_process_doc(sentence) if word not in self.stop_words]
 
     def text_to_index(self, text):
-        return [[self.get_index(word) for word in sentence.split(self.delim)] for sentence in text]
+        return [self.sentence_to_index(sentence) for sentence in text]
 
     def get_word(self, index):
         if index in self.index2word.keys():
@@ -81,7 +121,7 @@ class Indexer:
         return [self.get_word(index) for index in indexes]
 
     def text_to_words(self, index_text):
-        return [[self.get_word(index) for index in indexes] for indexes in index_text]
+        return [self.sentence_to_words(indexes) for indexes in index_text]
 
 
 if __name__ == '__main__':
@@ -100,3 +140,5 @@ if __name__ == '__main__':
                 print('{}({})'.format(word, id))
                 unk_count += 1
     print(unk_count)
+    for i in range(10):
+        print(indexer.sentence_to_words(indexes[i]))
