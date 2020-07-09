@@ -6,7 +6,7 @@ from ekphrasis.dicts.emoticons import emoticons
 
 
 class Indexer:
-    def __init__(self, special_tokens={'<s>': 0, '<unk>': 1, '<pad>': 2, '<\s>': 3, '<mask>': 4}, with_lower_case=True, lower_count=10):
+    def __init__(self, special_tokens={'<s>': 0, '<unk>': 1, '<pad>': 2, '<\s>': 3, '<mask>': 4}, with_preprocess=True, lower_count=10):
         if special_tokens is None:
             self.word2index = {'<unk>': 0, '<pad>': 1}
             self.current = 2
@@ -19,7 +19,7 @@ class Indexer:
         self.padding_index = self.word2index['<pad>']
         self.unknown_index = self.word2index['<unk>']
 
-        self.with_lower_case = with_lower_case
+        self.with_preprocess = with_preprocess
         self.delim = ' '
         self.counts = {}
         self.lower_count = lower_count
@@ -59,10 +59,10 @@ class Indexer:
         return self.current
 
     def count_word(self, word):
-        if self.with_lower_case:
+        if self.with_preprocess:
             word = word.lower()
-        if word in self.stop_words:
-            return
+            if word in self.stop_words:
+                return
         if word not in self.counts.keys():
             self.counts[word] = 1
         else:
@@ -77,12 +77,12 @@ class Indexer:
             self.count_word_in_sentence(sentence)
 
     def add_word(self, word):
-        if self.with_lower_case:
+        if self.with_preprocess:
             word = word.lower()
-        if word in self.counts.keys() and self.counts[word] < self.lower_count:
-            return
-        if word in self.stop_words:
-            return
+            if word in self.counts.keys() and self.counts[word] < self.lower_count:
+                return
+            if word in self.stop_words:
+                return
         if word not in self.vocab:
             self.word2index[word] = self.current
             self.index2word[self.current] = word
@@ -98,7 +98,7 @@ class Indexer:
             self.add_sentence(sentence)
 
     def get_index(self, word):
-        if self.with_lower_case:
+        if self.with_preprocess:
             word = word.lower()
         if word in self.vocab:
             return self.word2index[word]
