@@ -1,11 +1,19 @@
 from pathlib import Path
 from datetime import datetime
-from TweetNormalizer import normalizeTweet
 
 
 def get_now():
     dt_now = datetime.now()
     return dt_now.strftime('%Y.%m.%d %H:%M:%S')
+
+
+def get_label_text(num):
+    if num == 1:
+        return 'INFORMATIVE'
+    elif num == 0:
+        return 'UNINFORMATIVE'
+    else:
+        return None
 
 
 def get_label(text):
@@ -36,7 +44,7 @@ def get_datasets():
     modified_datasets = {tag: [] for tag in tags}
     for tag in tags:
         for line in datasets[tag]:
-            modified_datasets[tag].append([normalizeTweet(line[1]), get_label(line[2])])
+            modified_datasets[tag].append([line[1], get_label(line[2])])
     return modified_datasets, tags
 
 
