@@ -23,8 +23,9 @@ class Indexer:
         self.delim = ' '
         self.counts = {}
         self.lower_count = lower_count
-        self.stop_words = set(stopwords.words('english'))
+        self.max_length = 0
 
+        self.stop_words = set(stopwords.words('english'))
         self.text_processor = TextPreProcessor(
             # terms that will be normalized
             normalize=['url', 'email', 'percent', 'money', 'phone', 'user',
@@ -89,9 +90,13 @@ class Indexer:
             self.vocab.add(word)
             self.current += 1
 
-    def add_sentence(self, sentence):
-        for word in self.text_processor.pre_process_doc(sentence):
-            self.add_word(word)
+    def add_sentence(self, sentence, with_raw=False):
+        if with_raw:
+            for word in sentence:
+                self.add_word(word)
+        else:
+            for word in self.text_processor.pre_process_doc(sentence):
+                self.add_word(word)
 
     def add_sentences(self, sentences):
         for sentence in sentences:
