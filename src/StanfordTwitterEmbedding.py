@@ -10,7 +10,7 @@ from Indexer import Indexer
 class StanfordTwitterEmbedding(nn.Module):
     def __init__(self, device):
         super(StanfordTwitterEmbedding, self).__init__()
-        self.path = Path('../data/models/glove.twitter.27B/glove.twitter.27B.100d.txt')
+        self.path = Path('../data/models/glove.twitter.27B/glove.twitter.27B.200d.txt')
         with self.path.open('r', encoding='utf-8-sig') as f:
             texts = f.readlines()
         headers = [len(texts), None]
