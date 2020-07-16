@@ -2,6 +2,9 @@ import torch
 import torch.nn as nn
 
 from RawEmbedding import RawEmbedding
+from NtuaTwitterEmbedding import NtuaTwitterEmbedding
+from StanfordTwitterEmbedding import StanfordTwitterEmbedding
+from AbsolutePositionalEmbedding import AbsolutePositionalEmbedding
 from Attention import Attention
 
 from Batcher import Batcher
@@ -12,11 +15,11 @@ from HelperFunctions import get_now
 
 
 class BiGruSelfattention(nn.Module):
-    def __init__(self, device='cpu'):
+    def __init__(self, device='cpu', hyper_params=None):
         super(BiGruSelfattention, self).__init__()
-        self.embedding = RawEmbedding(device=device)
+        self.embeddings = nn.ModuleList([self.__get_embeddings(key=key, device=device) for key in self.__get_embedding_keys()])
 
-        emb_dim = self.embedding.embedding_dim
+        emb_dim = sum([item.embedding_dim for item in self.embeddings])
         self.hidden_size = emb_dim
         self.f_gru1 = nn.GRU(input_size=emb_dim, hidden_size=emb_dim, batch_first=True)
         self.b_gru1 = nn.GRU(input_size=emb_dim, hidden_size=emb_dim, batch_first=True)
@@ -37,7 +40,8 @@ class BiGruSelfattention(nn.Module):
         self.to(device)
 
     def forward(self, batch_sentence):
-        embeddings = self.embedding(batch_sentence)
+        embeddings = [embedding(batch_sentence) for embedding in self.embeddings]
+        embeddings = torch.cat(embeddings, dim=2)
         max_len = embeddings.shape[1]
 
         outf1, hidf1 = self.f_gru1(self.dropout1(embeddings))
@@ -74,6 +78,22 @@ class BiGruSelfattention(nn.Module):
         output = self.output(pooled_logits)
         return output
 
+    @staticmethod
+    def __get_embedding_keys():
+        return ['ntua', 'stanford', 'raw', 'position']
+        # return ['position']
+
+    @staticmethod
+    def __get_embeddings(key, device):
+        if key == 'ntua':
+            return NtuaTwitterEmbedding(device=device)
+        elif key == 'stanford':
+            return StanfordTwitterEmbedding(device=device)
+        elif key == 'raw':
+            return RawEmbedding(device=device)
+        elif key == 'position':
+            return AbsolutePositionalEmbedding(device=device)
+
 
 if __name__ == '__main__':
     from HelperFunctions import get_datasets
@@ -91,6 +111,7 @@ if __name__ == '__main__':
 
     criterion = nn.BCEWithLogitsLoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
+    # optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
     TRAIN_MODE, VALID_MODE = 'train', 'valid'
     batchers = {TRAIN_MODE: train_batcher, VALID_MODE: valid_batcher}
@@ -148,6 +169,18 @@ if __name__ == '__main__':
 
 
 '''
+ - with stanford twitter embedding 200d
+2020.07.09 18:22:50|epoch:   9|train loss: 388.35|valid loss: 99.32|valid f1: 82.573|valid precision: 80.894|valid recall: 84.322|valid accuracy: 83.200|valid tp: 398|valid fp: 94|valid fn: 74|valid tn: 434
+
+ - with stanford twitter embedding 100d
+2020.07.09 15:38:28|epoch:   9|train loss: 496.90|valid loss: 103.71|valid f1: 81.206|valid precision: 77.247|valid recall: 85.593|valid accuracy: 81.300|valid tp: 404|valid fp: 119|valid fn: 68|valid tn: 409
+
+ - with ntua twitter embedding
+2020.07.09 14:18:49|epoch:  17|train loss: 311.18|valid loss: 102.94|valid f1: 83.452|valid precision: 80.117|valid recall: 87.076|valid accuracy: 83.700|valid tp: 411|valid fp: 102|valid fn: 61|valid tn: 426
+
+ - apply ekphrasis
+2020.07.09 02:02:37|epoch:  21|train loss: 253.24|valid loss: 146.71|valid f1: 81.186|valid precision: 78.458|valid recall: 84.110|valid accuracy: 81.600|valid tp: 397|valid fp: 109|valid fn: 75|valid tn: 419
+
  - add Tweet normalizer
 2020.07.03 20:04:02|epoch:  20|train loss: 319.42|valid loss: 140.92|valid f1: 81.307|valid precision: 78.501|valid recall: 84.322|valid accuracy: 81.700|valid tp: 398|valid fp: 109|valid fn: 74|valid tn: 419
 
