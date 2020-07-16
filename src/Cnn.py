@@ -14,20 +14,20 @@ from Metrics import get_metrics, get_print_keys
 from HelperFunctions import get_now
 
 
-class BiGruSelfattention(nn.Module):
+class Cnn(nn.Module):
     def __init__(self, device='cpu', hyper_params=None):
-        super(BiGruSelfattention, self).__init__()
+        super(Cnn, self).__init__()
         self.embeddings = nn.ModuleList([self.__get_embeddings(key=key, device=device) for key in self.__get_embedding_keys()])
 
         emb_dim = sum([item.embedding_dim for item in self.embeddings])
         self.hidden_size = emb_dim
-        self.f_gru1 = nn.GRU(input_size=emb_dim, hidden_size=emb_dim, batch_first=True)
-        self.b_gru1 = nn.GRU(input_size=emb_dim, hidden_size=emb_dim, batch_first=True)
-        self.f_gru2 = nn.GRU(input_size=emb_dim, hidden_size=emb_dim, batch_first=True)
-        self.b_gru2 = nn.GRU(input_size=emb_dim, hidden_size=emb_dim, batch_first=True)
+        self.window_sizes = [3, 5, 7]
+        self.input_chs = [1, 5, 10]
+        self.output_chs = [5, 10, 15]
+        self.cnns = nn.ModuleList([nn.Conv2d(in_channels=ich, out_channels=och, kernel_size=(ws, emb_dim), stride=1) for ich, och, ws in zip(self.input_chs, self.output_chs, self.window_sizes)])
 
         self.num_head = 8
-        self.attention = nn.ModuleList([Attention(dimensions=emb_dim) for _ in range(self.num_head)])
+        self.attention = nn.ModuleList([Attention(dimensions=self.output_chs[-1]) for _ in range(self.num_head)])
 
         self.dropout1 = nn.Dropout(0.2)
         self.dropout2 = nn.Dropout(0.2)
@@ -44,23 +44,23 @@ class BiGruSelfattention(nn.Module):
         embeddings = torch.cat(embeddings, dim=2)
         max_len = embeddings.shape[1]
 
-        outf1, hidf1 = self.f_gru1(self.dropout1(embeddings))
-        resf1 = outf1 + embeddings
-        rev_resf1 = resf1[:,torch.arange(max_len-1, -1, -1),:] # reversed
+        m1 = self.cnns[0](self.dropout1(embeddings).unsqueeze(1))
+        # resf1 = outf1 + embeddings
+        # rev_resf1 = resf1[:,torch.arange(max_len-1, -1, -1),:] # reversed
+        #
+        # outb1, hidb1 = self.b_gru1(self.dropout1(rev_resf1))
+        # resb1 = outb1 + rev_resf1
+        # rev_resb1 = resb1[:,torch.arange(max_len-1, -1, -1),:] # not reversed
+        #
+        # outf2, hidf2 = self.f_gru2(self.dropout2(rev_resb1))
+        # resf2 = outf2 + rev_resb1
+        # rev_resf2 = resf2[:,torch.arange(max_len-1, -1, -1),:] # reversed
+        #
+        # outb2, hidb2 = self.b_gru2(self.dropout2(rev_resf2))
+        # resb2 = outb2 + rev_resf2
+        # rev_resb2 = resb2[:,torch.arange(max_len-1, -1, -1),:] # not reversed
 
-        outb1, hidb1 = self.b_gru1(self.dropout1(rev_resf1))
-        resb1 = outb1 + rev_resf1
-        rev_resb1 = resb1[:,torch.arange(max_len-1, -1, -1),:] # not reversed
-
-        outf2, hidf2 = self.f_gru2(self.dropout2(rev_resb1))
-        resf2 = outf2 + rev_resb1
-        rev_resf2 = resf2[:,torch.arange(max_len-1, -1, -1),:] # reversed
-
-        outb2, hidb2 = self.b_gru2(self.dropout2(rev_resf2))
-        resb2 = outb2 + rev_resf2
-        rev_resb2 = resb2[:,torch.arange(max_len-1, -1, -1),:] # not reversed
-
-        drop_output = self.dropout3(rev_resb2)
+        drop_output = self.dropout3(m1.squeeze(3))
         seq_logits, attention_weights = [], []
         for i in range(self.num_head):
             l, w = self.attention[i](query=drop_output, context=drop_output)
@@ -80,7 +80,8 @@ class BiGruSelfattention(nn.Module):
 
     @staticmethod
     def __get_embedding_keys():
-        return ['ntua', 'stanford', 'raw', 'position']
+        return ['ntua', 'position']
+        # return ['ntua', 'stanford', 'raw', 'position']
         # return ['position']
 
     @staticmethod
@@ -102,7 +103,7 @@ if __name__ == '__main__':
     valid_batcher = Batcher(x=[pairs[0] for pairs in datasets['valid']], y=[pairs[1] for pairs in datasets['valid']])
 
     device = torch.device('cuda:3')
-    model = BiGruSelfattention(device=device)
+    model = Cnn(device=device)
     print(model)
 
     for parameter in model.parameters():

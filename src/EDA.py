@@ -63,6 +63,7 @@ def probe_vocabs():
     del_items = set(
         ['<hashtag>', '</hashtag>', '<allcaps>', '</allcaps>', '<user>', 'covid19', 'coronavirus', 'covid',
          '<number>', 'httpurl', 19, '19'])
+    del_items |= set(["'", '"', ':', ';', '.', ',', '-', '!', '?', "'s", "<", ">", "(", ")", "/"])
     del_items |= set(nltk_stopwords.words('english'))
     for n_gram in n_grams:
         for tag in tags:
