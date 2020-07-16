@@ -1,9 +1,8 @@
-from sklearn.metrics import confusion_matrix
 
 
 def get_metrics(outputs, labels):
-    cm = confusion_matrix(outputs, labels, labels=[0, 1])
-    tn, fn, fp, tp = cm.flatten()
+
+    tp, fp, fn, tn = get_confusion_matrix(outputs, labels)
 
     accuracy = 0.0 if (tp + fp + fn + tn) == 0 else (tp + tn) / (tp + fp + fn + tn)
     precision = 0.0 if (tp + fp) == 0 else tp / (tp + fp)
@@ -11,6 +10,20 @@ def get_metrics(outputs, labels):
     f1 = 0.0 if (precision + recall) == 0 else 2 * precision * recall / (precision + recall)
 
     return {'tp': tp, 'fp': fp, 'fn': fn, 'tn': tn, 'accuracy': accuracy, 'precision': precision, 'recall': recall, 'f1': f1}
+
+
+def get_confusion_matrix(y_pred, y_true):
+    tp, fp, fn, tn = 0, 0, 0, 0
+    for yt, yp in zip(y_true, y_pred):
+        if yt == 1 and yp == 1:
+            tp += 1
+        elif yt == 1 and yp == 0:
+            fn += 1
+        elif yt == 0 and yp == 1:
+            fp += 1
+        elif yt == 0 and yp == 0:
+            tn += 1
+    return tp, fp, fn, tn
 
 
 def get_print_keys():
