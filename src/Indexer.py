@@ -1,8 +1,8 @@
-from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 from ekphrasis.classes.preprocessor import TextPreProcessor
 from ekphrasis.classes.tokenizer import SocialTokenizer
 from ekphrasis.dicts.emoticons import emoticons
+import emoji
 
 
 class Indexer:
@@ -26,12 +26,19 @@ class Indexer:
         self.max_length = 0
 
         self.stop_words = set(stopwords.words('english'))
+        self.stop_words |= set(
+            ['<hashtag>', '</hashtag>', '<allcaps>', '</allcaps>', '<user>', 'covid19', 'coronavirus', 'covid',
+             '<number>', 'httpurl', 19, '19'])
+        self.stop_words |= set(["'", '"', ':', ';', '.', ',', '-', '!', '?', "'s", "<", ">", "(", ")", "/"])
+
         self.text_processor = TextPreProcessor(
             # terms that will be normalized
             normalize=['url', 'email', 'percent', 'money', 'phone', 'user',
                        'time', 'url', 'date', 'number'],
             # terms that will be annotated
-            annotate={"hashtag", "allcaps", "elongated", "repeated",
+            # annotate={"hashtag", "allcaps", "elongated", "repeated",
+            #           'emphasis', 'censored'},
+            annotate={"elongated", "repeated",
                       'emphasis', 'censored'},
             fix_html=True,  # fix HTML tokens
 
@@ -59,18 +66,21 @@ class Indexer:
     def __len__(self):
         return self.current
 
-    def count_word(self, word):
+    def tokenize(self, sentence):
         if self.with_preprocess:
-            word = word.lower()
-            if word in self.stop_words:
-                return
+            sentence = [word for word in self.text_processor.pre_process_doc(sentence) if word not in self.stop_words]
+        else:
+            sentence = sentence.strip().split(' ')
+        return sentence
+
+    def count_word(self, word):
         if word not in self.counts.keys():
             self.counts[word] = 1
         else:
             self.counts[word] += 1
 
     def count_word_in_sentence(self, sentence):
-        for word in self.text_processor.pre_process_doc(sentence):
+        for word in self.tokenize(sentence):
             self.count_word(word)
 
     def count_word_in_text(self, text):
@@ -79,10 +89,9 @@ class Indexer:
 
     def add_word(self, word):
         if self.with_preprocess:
-            word = word.lower()
+            # if word in emoji.UNICODE_EMOJI:
+            #     print(word)
             if word in self.counts.keys() and self.counts[word] < self.lower_count:
-                return
-            if word in self.stop_words:
                 return
         if word not in self.vocab:
             self.word2index[word] = self.current
@@ -95,7 +104,7 @@ class Indexer:
             for word in sentence:
                 self.add_word(word)
         else:
-            for word in self.text_processor.pre_process_doc(sentence):
+            for word in self.tokenize(sentence):
                 self.add_word(word)
 
     def add_sentences(self, sentences):
@@ -103,18 +112,19 @@ class Indexer:
             self.add_sentence(sentence)
 
     def get_index(self, word):
-        if self.with_preprocess:
-            word = word.lower()
         if word in self.vocab:
             return self.word2index[word]
         else:
             return self.unknown_index
 
-    def sentence_to_index(self, sentence):
-        return [self.get_index(word) for word in self.text_processor.pre_process_doc(sentence) if word not in self.stop_words]
+    def sentence_to_index(self, sentence, with_raw=False):
+        if with_raw:
+            return [self.get_index(word) for word in sentence]
+        else:
+            return [self.get_index(word) for word in self.tokenize(sentence)]
 
-    def text_to_index(self, text):
-        return [self.sentence_to_index(sentence) for sentence in text]
+    def text_to_index(self, text, with_raw=False):
+        return [self.sentence_to_index(sentence, with_raw=with_raw) for sentence in text]
 
     def get_word(self, index):
         if index in self.index2word.keys():
