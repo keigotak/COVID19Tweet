@@ -4,8 +4,6 @@ from nltk.tokenize import TweetTokenizer
 from emoji import demojize
 import re
 
-tokenizer = TweetTokenizer()
-
 
 def normalizeToken(token):
     lowercased_token = token.lower()
@@ -25,6 +23,7 @@ def normalizeToken(token):
 
 
 def normalizeTweet(tweet):
+    tokenizer = TweetTokenizer()
     tokens = tokenizer.tokenize(tweet.replace("’", "'").replace("…", "..."))
     normTweet = " ".join([normalizeToken(token) for token in tokens])
 
