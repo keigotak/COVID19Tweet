@@ -36,3 +36,7 @@ class Batcher:
         self.x = [self.x[i] for i in indexes]
         self.y = [self.y[i] for i in indexes]
 
+    def set_batch_size(self, batch_size):
+        self.batch_size = batch_size
+        return self
+
