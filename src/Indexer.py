@@ -2,8 +2,7 @@ from nltk.corpus import stopwords
 from ekphrasis.classes.preprocessor import TextPreProcessor
 from ekphrasis.classes.tokenizer import SocialTokenizer
 from ekphrasis.dicts.emoticons import emoticons
-import emoji
-
+from TweetNormalizer import normalizeTweet
 
 class Indexer:
     def __init__(self, special_tokens={'<s>': 0, '<unk>': 1, '<pad>': 2, '<\s>': 3, '<mask>': 4}, with_preprocess=True, lower_count=10):
@@ -26,49 +25,51 @@ class Indexer:
         self.max_length = 0
 
         self.stop_words = set(stopwords.words('english'))
-        self.stop_words |= set(
-            ['<hashtag>', '</hashtag>', '<allcaps>', '</allcaps>', '<user>', 'covid19', 'coronavirus', 'covid',
-             '<number>', 'httpurl', 19, '19'])
-        self.stop_words |= set(["'", '"', ':', ';', '.', ',', '-', '!', '?', "'s", "<", ">", "(", ")", "/"])
+        # self.stop_words |= set(
+        #     ['<hashtag>', '</hashtag>', '<allcaps>', '</allcaps>', '<user>', 'covid19', 'coronavirus', 'covid',
+        #      '<number>', 'httpurl', 19, '19'])
+        # self.stop_words |= set(["'", '"', ':', ';', '.', ',', '-', '!', '?', "'s", "<", ">", "(", ")", "/"])
 
-        self.text_processor = TextPreProcessor(
-            # terms that will be normalized
-            normalize=['url', 'email', 'percent', 'money', 'phone', 'user',
-                       'time', 'url', 'date', 'number'],
-            # terms that will be annotated
-            # annotate={"hashtag", "allcaps", "elongated", "repeated",
-            #           'emphasis', 'censored'},
-            annotate={"elongated", "repeated",
-                      'emphasis', 'censored'},
-            fix_html=True,  # fix HTML tokens
-
-            # corpus from which the word statistics are going to be used
-            # for word segmentation
-            segmenter="twitter",
-
-            # corpus from which the word statistics are going to be used
-            # for spell correction
-            corrector="twitter",
-
-            unpack_hashtags=True,  # perform word segmentation on hashtags
-            unpack_contractions=True,  # Unpack contractions (can't -> can not)
-            spell_correct_elong=False,  # spell correction for elongated words
-
-            # select a tokenizer. You can use SocialTokenizer, or pass your own
-            # the tokenizer, should take as input a string and return a list of tokens
-            tokenizer=SocialTokenizer(lowercase=True).tokenize,
-
-            # list of dictionaries, for replacing tokens extracted from the text,
-            # with other expressions. You can pass more than one dictionaries.
-            dicts=[emoticons]
-        )
+        # self.text_processor = TextPreProcessor(
+        #     # terms that will be normalized
+        #     normalize=['url', 'email', 'percent', 'money', 'phone', 'user',
+        #                'time', 'url', 'date', 'number'],
+        #     # terms that will be annotated
+        #     annotate={"hashtag", "allcaps", "elongated", "repeated",
+        #               'emphasis', 'censored'},
+        #     # annotate={"elongated", "repeated",
+        #     #           'emphasis', 'censored'},
+        #     fix_html=True,  # fix HTML tokens
+        #
+        #     # corpus from which the word statistics are going to be used
+        #     # for word segmentation
+        #     segmenter="twitter",
+        #
+        #     # corpus from which the word statistics are going to be used
+        #     # for spell correction
+        #     corrector="twitter",
+        #
+        #     unpack_hashtags=True,  # perform word segmentation on hashtags
+        #     unpack_contractions=True,  # Unpack contractions (can't -> can not)
+        #     spell_correct_elong=False,  # spell correction for elongated words
+        #
+        #     # select a tokenizer. You can use SocialTokenizer, or pass your own
+        #     # the tokenizer, should take as input a string and return a list of tokens
+        #     tokenizer=SocialTokenizer(lowercase=True).tokenize,
+        #
+        #     # list of dictionaries, for replacing tokens extracted from the text,
+        #     # with other expressions. You can pass more than one dictionaries.
+        #     dicts=[emoticons]
+        # )
+        self.text_processor = normalizeTweet
 
     def __len__(self):
         return self.current
 
     def tokenize(self, sentence):
         if self.with_preprocess:
-            sentence = [word for word in self.text_processor.pre_process_doc(sentence) if word not in self.stop_words]
+            # sentence = [word for word in self.text_processor.pre_process_doc(sentence) if word not in self.stop_words]
+            sentence = [word for word in self.text_processor(sentence) if word not in self.stop_words]
         else:
             sentence = sentence.strip().split(' ')
         return sentence
