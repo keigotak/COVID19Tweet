@@ -21,20 +21,18 @@ class Cnn(nn.Module):
 
         emb_dim = sum([item.embedding_dim for item in self.embeddings])
         self.hidden_size = emb_dim
+        self.kernel_size = 100
         self.window_sizes = [3, 5, 7]
-        self.input_chs = [1, 5, 10]
-        self.output_chs = [5, 10, 15]
+        self.input_chs = [1, 1, 1]
+        self.output_chs = [self.kernel_size, self.kernel_size, self.kernel_size]
+
+        self.dropout = nn.Dropout(0.5)
         self.cnns = nn.ModuleList([nn.Conv2d(in_channels=ich, out_channels=och, kernel_size=(ws, emb_dim), stride=1) for ich, och, ws in zip(self.input_chs, self.output_chs, self.window_sizes)])
 
         self.num_head = 8
-        self.attention = nn.ModuleList([Attention(dimensions=self.output_chs[-1]) for _ in range(self.num_head)])
+        self.attention = nn.ModuleList([Attention(dimensions=self.kernel_size) for _ in range(self.num_head)])
 
-        self.dropout1 = nn.Dropout(0.2)
-        self.dropout2 = nn.Dropout(0.2)
-        self.dropout3 = nn.Dropout(0.2)
-
-        self.pooling = nn.AdaptiveAvgPool1d(1)
-        self.output = nn.Linear(emb_dim, 1)
+        self.output = nn.Linear(sum(self.output_chs), 1)
 
         self.device = device
         self.to(device)
@@ -42,45 +40,25 @@ class Cnn(nn.Module):
     def forward(self, batch_sentence):
         embeddings = [embedding(batch_sentence) for embedding in self.embeddings]
         embeddings = torch.cat(embeddings, dim=2)
-        max_len = embeddings.shape[1]
+        max_len = embeddings.shape[1] - 2
 
-        m1 = self.cnns[0](self.dropout1(embeddings).unsqueeze(1))
-        # resf1 = outf1 + embeddings
-        # rev_resf1 = resf1[:,torch.arange(max_len-1, -1, -1),:] # reversed
-        #
-        # outb1, hidb1 = self.b_gru1(self.dropout1(rev_resf1))
-        # resb1 = outb1 + rev_resf1
-        # rev_resb1 = resb1[:,torch.arange(max_len-1, -1, -1),:] # not reversed
-        #
-        # outf2, hidf2 = self.f_gru2(self.dropout2(rev_resb1))
-        # resf2 = outf2 + rev_resb1
-        # rev_resf2 = resf2[:,torch.arange(max_len-1, -1, -1),:] # reversed
-        #
-        # outb2, hidb2 = self.b_gru2(self.dropout2(rev_resf2))
-        # resb2 = outb2 + rev_resf2
-        # rev_resb2 = resb2[:,torch.arange(max_len-1, -1, -1),:] # not reversed
+        # feature_map = [torch.max_pool2d(torch.relu(layer(self.dropout(embeddings.unsqueeze(1)))), (max_len)).squeeze() for layer in self.cnns]
+        # feature_map = [torch.max_pool1d(torch.relu(layer(self.dropout(embeddings.unsqueeze(1)))).squeeze(), kernel_size=max_len).squeeze() for layer in self.cnns]
+        feature_map = [torch.relu(layer(self.dropout(embeddings.unsqueeze(1)))).squeeze() for layer in self.cnns]
+        multi_feature_maps = torch.cat(feature_map, dim=2)
 
-        drop_output = self.dropout3(m1.squeeze(3))
         seq_logits, attention_weights = [], []
         for i in range(self.num_head):
-            l, w = self.attention[i](query=drop_output, context=drop_output)
+            l, w = self.attention[i](query=multi_feature_maps, context=multi_feature_maps)
             seq_logits.append(l)
             attention_weights.append(w)
-        avg_seq_logits = None
-        for l in seq_logits:
-            if avg_seq_logits is None:
-                avg_seq_logits = l
-            else:
-                avg_seq_logits = avg_seq_logits + l
-        avg_seq_logits /= self.num_head
 
-        pooled_logits = self.pooling(avg_seq_logits.transpose(2, 1)).transpose(2, 1).squeeze()
-        output = self.output(pooled_logits)
+        output = self.output(multi_feature_maps)
         return output
 
     @staticmethod
     def __get_embedding_keys():
-        return ['ntua', 'position']
+        return ['raw', 'position']
         # return ['ntua', 'stanford', 'raw', 'position']
         # return ['position']
 
@@ -102,7 +80,7 @@ if __name__ == '__main__':
     train_batcher = Batcher(x=[pairs[0] for pairs in datasets['train']], y=[pairs[1] for pairs in datasets['train']])
     valid_batcher = Batcher(x=[pairs[0] for pairs in datasets['valid']], y=[pairs[1] for pairs in datasets['valid']])
 
-    device = torch.device('cuda:3')
+    device = torch.device('cuda:0')
     model = Cnn(device=device)
     print(model)
 
@@ -147,14 +125,14 @@ if __name__ == '__main__':
                 running_loss[mode] += loss.item()
 
                 preds = torch.sigmoid(outputs)
-                predict_label = [0 if item < 0.5 else 1 for item in preds.squeeze().tolist()]
+                predicted_label = [0 if item < 0.5 else 1 for item in preds.squeeze().tolist()]
                 poolers[mode].set('epoch{}-x'.format(e+1), x_batch)
                 poolers[mode].set('epoch{}-y'.format(e+1), y_batch)
                 poolers[mode].set('epoch{}-logits'.format(e+1), outputs.squeeze().tolist())
                 poolers[mode].set('epoch{}-preds'.format(e+1), preds.squeeze().tolist())
-                poolers[mode].set('epoch{}-predict_label'.format(e+1), predict_label)
+                poolers[mode].set('epoch{}-predicted_label'.format(e+1), predicted_label)
 
-        metrics = get_metrics(poolers[mode].get('epoch{}-predict_label'.format(e+1)), poolers[mode].get('epoch{}-y'.format(e+1)))
+        metrics = get_metrics(poolers[mode].get('epoch{}-predicted_label'.format(e+1)), poolers[mode].get('epoch{}-y'.format(e+1)))
         poolers[mode].set('epoch{}-metrics'.format(e+1), metrics)
         poolers[mode].set('epoch{}-train_loss'.format(e+1), running_loss[TRAIN_MODE])
         poolers[mode].set('epoch{}-valid_loss'.format(e+1), running_loss[VALID_MODE])
@@ -162,7 +140,7 @@ if __name__ == '__main__':
         batchers[mode].reset(with_shuffle=False)
 
         now = get_now()
-        text_line = '|'.join(['{} {}: {:.3f}'.format(mode, key, 100 * metrics[key]) if key not in set(['tp', 'fp', 'fn', 'tn']) else '{} {}: {}'.format(mode, key, metrics[key]) for key in get_print_keys() ])
+        text_line = '|'.join(['{} {}: {:.3f}'.format(mode, key, 100 * metrics[key]) if key not in set(['tp', 'fp', 'fn', 'tn']) else '{} {}: {}'.format(mode, key, metrics[key]) for key in get_print_keys()])
         print('{}|epoch: {:3d}|train loss: {:.2f}|valid loss: {:.2f}|{}'.format(now, e+1, running_loss[TRAIN_MODE], running_loss[VALID_MODE], text_line))
 
         if valuewatcher.is_over():
@@ -170,22 +148,5 @@ if __name__ == '__main__':
 
 
 '''
- - with stanford twitter embedding 200d
-2020.07.09 18:22:50|epoch:   9|train loss: 388.35|valid loss: 99.32|valid f1: 82.573|valid precision: 80.894|valid recall: 84.322|valid accuracy: 83.200|valid tp: 398|valid fp: 94|valid fn: 74|valid tn: 434
-
- - with stanford twitter embedding 100d
-2020.07.09 15:38:28|epoch:   9|train loss: 496.90|valid loss: 103.71|valid f1: 81.206|valid precision: 77.247|valid recall: 85.593|valid accuracy: 81.300|valid tp: 404|valid fp: 119|valid fn: 68|valid tn: 409
-
- - with ntua twitter embedding
-2020.07.09 14:18:49|epoch:  17|train loss: 311.18|valid loss: 102.94|valid f1: 83.452|valid precision: 80.117|valid recall: 87.076|valid accuracy: 83.700|valid tp: 411|valid fp: 102|valid fn: 61|valid tn: 426
-
- - apply ekphrasis
-2020.07.09 02:02:37|epoch:  21|train loss: 253.24|valid loss: 146.71|valid f1: 81.186|valid precision: 78.458|valid recall: 84.110|valid accuracy: 81.600|valid tp: 397|valid fp: 109|valid fn: 75|valid tn: 419
-
- - add Tweet normalizer
-2020.07.03 20:04:02|epoch:  20|train loss: 319.42|valid loss: 140.92|valid f1: 81.307|valid precision: 78.501|valid recall: 84.322|valid accuracy: 81.700|valid tp: 398|valid fp: 109|valid fn: 74|valid tn: 419
-
- - with multi head
-2020.07.02 00:32:48|epoch:  12|train loss: 523.66|valid loss: 123.62|valid f1: 79.959|valid precision: 77.273|valid recall: 82.839|valid accuracy: 80.400|valid tp: 391|valid fp: 115|valid fn: 81|valid tn: 413
 '''
 
