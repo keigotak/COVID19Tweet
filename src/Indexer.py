@@ -15,6 +15,9 @@ class Indexer:
         self.index2word = {val: key for key, val in special_tokens.items()}
         self.vocab = set([key for key, val in special_tokens.items()])
 
+        self.sentence2indexes = {}
+        self.indexes2sentence ={}
+
         self.padding_index = self.word2index['<pad>']
         self.unknown_index = self.word2index['<unk>']
 
@@ -118,11 +121,17 @@ class Indexer:
         else:
             return self.unknown_index
 
-    def sentence_to_index(self, sentence, with_raw=False):
-        if with_raw:
-            return [self.get_index(word) for word in sentence]
-        else:
-            return [self.get_index(word) for word in self.tokenize(sentence)]
+    def sentence_to_index(self, raw_sentence, with_raw=False):
+        joined_raw_sentence = ' '.join(raw_sentence)
+        if joined_raw_sentence in self.sentence2indexes.keys():
+            return self.sentence2indexes[joined_raw_sentence]
+
+        if not with_raw:
+            sentence = self.tokenize(raw_sentence)
+        indexes = [self.get_index(word) for word in sentence]
+        self.sentence2indexes[joined_raw_sentence] = indexes
+        self.indexes2sentence[' '.join(map(str, indexes))] = [sentence, raw_sentence]
+        return indexes
 
     def text_to_index(self, text, with_raw=False):
         return [self.sentence_to_index(sentence, with_raw=with_raw) for sentence in text]
