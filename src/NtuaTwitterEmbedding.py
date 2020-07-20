@@ -15,7 +15,7 @@ class NtuaTwitterEmbedding(nn.Module):
         contents = [text.strip().split(' ') for text in texts[1:]]
         vocab = [content[0] for content in contents]
         weights = [list(map(float, content[1:])) for content in contents]
-        self.indexer = Indexer(special_tokens={'<s>': 0, '<unk>': 1, '<pad>': 2, '<\s>': 3, '<mask>': 4})
+        self.indexer = Indexer(special_tokens={'<s>': 0, '<unk>': 1, '<pad>': 2, '<\s>': 3, '<mask>': 4}, with_preprocess=False)
         for word in vocab:
             self.indexer.count_word(word)
             self.indexer.add_word(word)
