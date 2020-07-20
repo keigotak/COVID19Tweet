@@ -4,6 +4,7 @@ from ekphrasis.classes.tokenizer import SocialTokenizer
 from ekphrasis.dicts.emoticons import emoticons
 from TweetNormalizer import normalizeTweet
 
+
 class Indexer:
     def __init__(self, special_tokens={'<s>': 0, '<unk>': 1, '<pad>': 2, '<\s>': 3, '<mask>': 4}, with_preprocess=True, lower_count=10):
         if special_tokens is None:
@@ -33,46 +34,44 @@ class Indexer:
         #      '<number>', 'httpurl', 19, '19'])
         # self.stop_words |= set(["'", '"', ':', ';', '.', ',', '-', '!', '?', "'s", "<", ">", "(", ")", "/"])
 
-        # self.text_processor = TextPreProcessor(
-        #     # terms that will be normalized
-        #     normalize=['url', 'email', 'percent', 'money', 'phone', 'user',
-        #                'time', 'url', 'date', 'number'],
-        #     # terms that will be annotated
-        #     annotate={"hashtag", "allcaps", "elongated", "repeated",
-        #               'emphasis', 'censored'},
-        #     # annotate={"elongated", "repeated",
-        #     #           'emphasis', 'censored'},
-        #     fix_html=True,  # fix HTML tokens
-        #
-        #     # corpus from which the word statistics are going to be used
-        #     # for word segmentation
-        #     segmenter="twitter",
-        #
-        #     # corpus from which the word statistics are going to be used
-        #     # for spell correction
-        #     corrector="twitter",
-        #
-        #     unpack_hashtags=True,  # perform word segmentation on hashtags
-        #     unpack_contractions=True,  # Unpack contractions (can't -> can not)
-        #     spell_correct_elong=False,  # spell correction for elongated words
-        #
-        #     # select a tokenizer. You can use SocialTokenizer, or pass your own
-        #     # the tokenizer, should take as input a string and return a list of tokens
-        #     tokenizer=SocialTokenizer(lowercase=True).tokenize,
-        #
-        #     # list of dictionaries, for replacing tokens extracted from the text,
-        #     # with other expressions. You can pass more than one dictionaries.
-        #     dicts=[emoticons]
-        # )
-        self.text_processor = normalizeTweet
+        self.text_processor = TextPreProcessor(
+            # terms that will be normalized
+            normalize=['url', 'email', 'percent', 'money', 'phone', 'user',
+                       'time', 'date', 'number'],
+            # terms that will be annotated
+            annotate={"hashtag", "allcaps", "elongated", "repeated",
+                      'emphasis', 'censored'},
+            fix_html=True,  # fix HTML tokens
+
+            # corpus from which the word statistics are going to be used
+            # for word segmentation
+            segmenter="twitter",
+
+            # corpus from which the word statistics are going to be used
+            # for spell correction
+            corrector="twitter",
+
+            unpack_hashtags=True,  # perform word segmentation on hashtags
+            unpack_contractions=True,  # Unpack contractions (can't -> can not)
+            spell_correct_elong=False,  # spell correction for elongated words
+
+            # select a tokenizer. You can use SocialTokenizer, or pass your own
+            # the tokenizer, should take as input a string and return a list of tokens
+            tokenizer=SocialTokenizer(lowercase=True).tokenize,
+
+            # list of dictionaries, for replacing tokens extracted from the text,
+            # with other expressions. You can pass more than one dictionaries.
+            dicts=[emoticons]
+        )
+        # self.text_processor = normalizeTweet
 
     def __len__(self):
         return self.current
 
     def tokenize(self, sentence):
         if self.with_preprocess:
-            # sentence = [word for word in self.text_processor.pre_process_doc(sentence) if word not in self.stop_words]
-            sentence = [word for word in self.text_processor(sentence) if word not in self.stop_words]
+            sentence = [word for word in self.text_processor.pre_process_doc(sentence) if word not in self.stop_words]
+            # sentence = [word for word in self.text_processor(sentence) if word not in self.stop_words]
         else:
             sentence = sentence.strip().split(' ')
         return sentence
@@ -122,14 +121,13 @@ class Indexer:
             return self.unknown_index
 
     def sentence_to_index(self, raw_sentence, with_raw=False):
-        joined_raw_sentence = ' '.join(raw_sentence)
-        if joined_raw_sentence in self.sentence2indexes.keys():
-            return self.sentence2indexes[joined_raw_sentence]
+        if raw_sentence in self.sentence2indexes.keys():
+            return self.sentence2indexes[raw_sentence]
 
         if not with_raw:
             sentence = self.tokenize(raw_sentence)
         indexes = [self.get_index(word) for word in sentence]
-        self.sentence2indexes[joined_raw_sentence] = indexes
+        self.sentence2indexes[raw_sentence] = indexes
         self.indexes2sentence[' '.join(map(str, indexes))] = [sentence, raw_sentence]
         return indexes
 
