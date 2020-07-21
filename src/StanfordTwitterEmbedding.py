@@ -8,7 +8,7 @@ from Indexer import Indexer
 
 
 class StanfordTwitterEmbedding(nn.Module):
-    def __init__(self, device, stop_words=None):
+    def __init__(self, device, stop_words=None, tokenizer=None):
         super(StanfordTwitterEmbedding, self).__init__()
         self.path = Path('../data/models/glove.twitter.27B/glove.twitter.27B.200d.txt')
         with self.path.open('r', encoding='utf-8-sig') as f:
@@ -17,7 +17,7 @@ class StanfordTwitterEmbedding(nn.Module):
         contents = [text.split(' ') for text in texts]
         vocab = [content[0] for content in contents]
         weights = [list(map(float, content[1:])) for content in contents]
-        self.indexer = Indexer(special_tokens={'<s>': 0, '<unk>': 1, '<pad>': 2, '<\s>': 3, '<mask>': 4}, stop_words=stop_words)
+        self.indexer = Indexer(special_tokens={'<s>': 0, '<unk>': 1, '<pad>': 2, '<\s>': 3, '<mask>': 4}, stop_words=stop_words, tokenizer=tokenizer)
         for word in vocab:
             self.indexer.count_word(word)
             self.indexer.add_word(word)

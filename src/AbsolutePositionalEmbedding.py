@@ -5,7 +5,7 @@ from Indexer import Indexer
 
 
 class AbsolutePositionalEmbedding(nn.Module):
-    def __init__(self, device, stop_words=set()):
+    def __init__(self, device, stop_words=set(), tokenizer=None):
         super(AbsolutePositionalEmbedding, self).__init__()
         self.max_length = 150
         self.indexer = Indexer(special_tokens={'<s>': 0, '<unk>': 1, '<pad>': 2, '<\s>': 3, '<mask>': 4}, with_preprocess=True)

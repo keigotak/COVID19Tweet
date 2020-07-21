@@ -5,9 +5,9 @@ from Indexer import Indexer
 
 
 class RawEmbedding(nn.Module):
-    def __init__(self, device, stop_words=None):
+    def __init__(self, device, stop_words=None, tokenizer=None):
         super(RawEmbedding, self).__init__()
-        self.indexer = Indexer(special_tokens={'<s>': 0, '<unk>': 1, '<pad>': 2, '<\s>': 3, '<mask>': 4}, stop_words=stop_words)
+        self.indexer = Indexer(special_tokens={'<s>': 0, '<unk>': 1, '<pad>': 2, '<\s>': 3, '<mask>': 4}, stop_words=stop_words, tokenizer=tokenizer)
         from HelperFunctions import get_datasets
         datasets, tags = get_datasets()
         sentences = [pairs[0] for pairs in datasets['train']]

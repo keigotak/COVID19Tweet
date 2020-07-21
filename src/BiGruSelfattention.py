@@ -16,15 +16,16 @@ from Batcher import Batcher
 from DataPooler import DataPooler
 from ValueWatcher import ValueWatcher
 from Metrics import get_metrics, get_print_keys
-from HelperFunctions import get_now, get_milliseconds, get_datasets, get_stop_words
+from HelperFunctions import get_now, get_milliseconds, get_datasets, get_stop_words, get_tokenizer
 
 stop_words = get_stop_words()
+tokenizer = get_tokenizer()
 
 
 class BiGruSelfattention(nn.Module):
     def __init__(self, device='cpu', hyper_params=None):
         super(BiGruSelfattention, self).__init__()
-        self.embeddings = nn.ModuleList([self.__get_embeddings(key=key, device=device, stop_words=stop_words) for key in self.__get_embedding_keys()])
+        self.embeddings = nn.ModuleList([self.__get_embeddings(key=key, device=device, stop_words=stop_words, tokenizer=tokenizer) for key in self.__get_embedding_keys()])
 
         emb_dim = sum([item.embedding_dim for item in self.embeddings])
         self.hidden_size = emb_dim
@@ -87,17 +88,17 @@ class BiGruSelfattention(nn.Module):
     def __get_embedding_keys():
         # return ['ntua', 'stanford', 'raw', 'position']
         # return ['position']
-        return ['ntua']
-        # return ['raw']
+        # return ['ntua']
+        return ['raw']
 
     @staticmethod
-    def __get_embeddings(key, device, stop_words):
+    def __get_embeddings(key, device, stop_words, tokenizer):
         if key == 'ntua':
-            return NtuaTwitterEmbedding(device=device, stop_words=stop_words)
+            return NtuaTwitterEmbedding(device=device, stop_words=stop_words, tokenizer=tokenizer)
         elif key == 'stanford':
-            return StanfordTwitterEmbedding(device=device, stop_words=stop_words)
+            return StanfordTwitterEmbedding(device=device, stop_words=stop_words, tokenizer=tokenizer)
         elif key == 'raw':
-            return RawEmbedding(device=device, stop_words=stop_words)
+            return RawEmbedding(device=device, stop_words=stop_words, tokenizer=tokenizer)
         elif key == 'position':
             return AbsolutePositionalEmbedding(device=device)
 
@@ -224,6 +225,11 @@ class Runner:
                 break
         return metrics['f1']
 
+    def export_results(self):
+        pass
+
+
+
 
 class HyperparameterSearcher:
     def __init__(self):
@@ -259,64 +265,12 @@ class HyperparameterSearcher:
 
 
 if __name__ == '__main__':
-    hyps = HyperparameterSearcher()
-    hyps.run()
-    # device = 'cuda:3'
-    # factory = Factory(device=device).generate()
-    # model, batchers, optimizer, criterion = factory['model'], factory['batchers'], factory['optimizer'], factory['criterion']
-    # TRAIN_MODE, VALID_MODE = 'train', 'valid'
-    # batchers = {TRAIN_MODE: batchers[TRAIN_MODE], VALID_MODE: batchers[VALID_MODE]}
-    # poolers = {VALID_MODE: DataPooler()}
-    # valuewatcher = ValueWatcher()
-    # epochs = 100
-    #
-    # for e in range(epochs):
-    #     running_loss = {key: 0.0 for key in [TRAIN_MODE, VALID_MODE]}
-    #
-    #     mode = TRAIN_MODE
-    #     model.train()
-    #     while not batchers[mode].is_batch_end():
-    #         optimizer.zero_grad()
-    #         x_batch, y_batch = batchers[mode].get_batch()
-    #         outputs = model(x_batch)
-    #         labels = torch.Tensor(y_batch).float().unsqueeze(1).to(device)
-    #         loss = criterion(outputs, labels)
-    #         loss.backward()
-    #         running_loss[mode] += loss.item()
-    #         optimizer.step()
-    #     batchers[mode].reset(with_shuffle=True)
-    #
-    #     mode = VALID_MODE
-    #     model.eval()
-    #     with torch.no_grad():
-    #         while not batchers[mode].is_batch_end():
-    #             x_batch, y_batch = batchers[mode].get_batch()
-    #             outputs = model(x_batch)
-    #             labels = torch.Tensor(y_batch).float().unsqueeze(1).to(device)
-    #             loss = criterion(outputs, labels)
-    #             running_loss[mode] += loss.item()
-    #
-    #             preds = torch.sigmoid(outputs)
-    #             predicted_label = [0 if item < 0.5 else 1 for item in preds.squeeze().tolist()]
-    #             poolers[mode].set('epoch{}-x'.format(e+1), x_batch)
-    #             poolers[mode].set('epoch{}-y'.format(e+1), y_batch)
-    #             poolers[mode].set('epoch{}-logits'.format(e+1), outputs.squeeze().tolist())
-    #             poolers[mode].set('epoch{}-preds'.format(e+1), preds.squeeze().tolist())
-    #             poolers[mode].set('epoch{}-predicted_label'.format(e+1), predicted_label)
-    #
-    #     metrics = get_metrics(poolers[mode].get('epoch{}-predicted_label'.format(e+1)), poolers[mode].get('epoch{}-y'.format(e+1)))
-    #     poolers[mode].set('epoch{}-metrics'.format(e+1), metrics)
-    #     poolers[mode].set('epoch{}-train_loss'.format(e+1), running_loss[TRAIN_MODE])
-    #     poolers[mode].set('epoch{}-valid_loss'.format(e+1), running_loss[VALID_MODE])
-    #     valuewatcher.update(metrics['f1'])
-    #     batchers[mode].reset(with_shuffle=False)
-    #
-    #     now = get_now()
-    #     text_line = '|'.join(['{} {}: {:.3f}'.format(mode, key, 100 * metrics[key]) if key not in set(['tp', 'fp', 'fn', 'tn']) else '{} {}: {}'.format(mode, key, metrics[key]) for key in get_print_keys()])
-    #     print('{}|epoch: {:3d}|train loss: {:.2f}|valid loss: {:.2f}|{}'.format(now, e+1, running_loss[TRAIN_MODE], running_loss[VALID_MODE], text_line))
-    #
-    #     if valuewatcher.is_over():
-    #         break
+    runner = Runner()
+    score = runner.run()
+
+    # hyps = HyperparameterSearcher()
+    # hyps.run()
+
 
 
 '''
