@@ -3,6 +3,9 @@ import copy
 import torch
 import torch.nn as nn
 
+import optuna
+from optuna.samplers import TPESampler
+
 from RawEmbedding import RawEmbedding
 from NtuaTwitterEmbedding import NtuaTwitterEmbedding
 from StanfordTwitterEmbedding import StanfordTwitterEmbedding
@@ -13,13 +16,15 @@ from Batcher import Batcher
 from DataPooler import DataPooler
 from ValueWatcher import ValueWatcher
 from Metrics import get_metrics, get_print_keys
-from HelperFunctions import get_now, get_datasets
+from HelperFunctions import get_now, get_milliseconds, get_datasets, get_stop_words
+
+stop_words = get_stop_words()
 
 
 class BiGruSelfattention(nn.Module):
     def __init__(self, device='cpu', hyper_params=None):
         super(BiGruSelfattention, self).__init__()
-        self.embeddings = nn.ModuleList([self.__get_embeddings(key=key, device=device) for key in self.__get_embedding_keys()])
+        self.embeddings = nn.ModuleList([self.__get_embeddings(key=key, device=device, stop_words=stop_words) for key in self.__get_embedding_keys()])
 
         emb_dim = sum([item.embedding_dim for item in self.embeddings])
         self.hidden_size = emb_dim
@@ -80,17 +85,19 @@ class BiGruSelfattention(nn.Module):
 
     @staticmethod
     def __get_embedding_keys():
-        return ['ntua', 'stanford', 'raw', 'position']
+        # return ['ntua', 'stanford', 'raw', 'position']
         # return ['position']
+        return ['ntua']
+        # return ['raw']
 
     @staticmethod
-    def __get_embeddings(key, device):
+    def __get_embeddings(key, device, stop_words):
         if key == 'ntua':
-            return NtuaTwitterEmbedding(device=device)
+            return NtuaTwitterEmbedding(device=device, stop_words=stop_words)
         elif key == 'stanford':
-            return StanfordTwitterEmbedding(device=device)
+            return StanfordTwitterEmbedding(device=device, stop_words=stop_words)
         elif key == 'raw':
-            return RawEmbedding(device=device)
+            return RawEmbedding(device=device, stop_words=stop_words)
         elif key == 'position':
             return AbsolutePositionalEmbedding(device=device)
 
@@ -148,63 +155,168 @@ class Factory(BaseFactory):
                 }
 
 
-if __name__ == '__main__':
-    device = 'cuda:0'
-    factory = Factory(device=device).generate()
-    model, batchers, optimizer, criterion = factory['model'], factory['batchers'], factory['optimizer'], factory['criterion']
-    TRAIN_MODE, VALID_MODE = 'train', 'valid'
-    batchers = {TRAIN_MODE: batchers[TRAIN_MODE], VALID_MODE: batchers[VALID_MODE]}
-    poolers = {VALID_MODE: DataPooler()}
-    valuewatcher = ValueWatcher()
-    epochs = 100
+class Runner:
+    def __init__(self, device='cuda:0', hyper_params={}):
+        self.device = device
+        factory = Factory(device=self.device, hyper_params=hyper_params).generate()
+        self.model, self.batchers, self.optimizer, self.criterion = [factory[key] for key in ['model', 'batchers', 'optimizer', 'criterion']]
+        self.TRAIN_MODE, self.VALID_MODE = 'train', 'valid'
+        self.batchers = {self.TRAIN_MODE: self.batchers[self.TRAIN_MODE], self.VALID_MODE: self.batchers[self.VALID_MODE]}
+        self.poolers = {self.VALID_MODE: DataPooler()}
+        self.valuewatcher = ValueWatcher()
+        self.epochs = 100
 
-    for e in range(epochs):
-        running_loss = {key: 0.0 for key in [TRAIN_MODE, VALID_MODE]}
+    def run(self):
+        for e in range(self.epochs):
+            running_loss = {key: 0.0 for key in [self.TRAIN_MODE, self.VALID_MODE]}
 
-        mode = TRAIN_MODE
-        model.train()
-        while not batchers[mode].is_batch_end():
-            optimizer.zero_grad()
-            x_batch, y_batch = batchers[mode].get_batch()
-            outputs = model(x_batch)
-            labels = torch.Tensor(y_batch).float().unsqueeze(1).to(device)
-            loss = criterion(outputs, labels)
-            loss.backward()
-            running_loss[mode] += loss.item()
-            optimizer.step()
-        batchers[mode].reset(with_shuffle=True)
-
-        mode = VALID_MODE
-        model.eval()
-        with torch.no_grad():
-            while not batchers[mode].is_batch_end():
-                x_batch, y_batch = batchers[mode].get_batch()
-                outputs = model(x_batch)
-                labels = torch.Tensor(y_batch).float().unsqueeze(1).to(device)
-                loss = criterion(outputs, labels)
+            mode = self.TRAIN_MODE
+            self.model.train()
+            while not self.batchers[mode].is_batch_end():
+                self.optimizer.zero_grad()
+                x_batch, y_batch = self.batchers[mode].get_batch()
+                outputs = self.model(x_batch)
+                labels = torch.Tensor(y_batch).float().unsqueeze(1).to(self.device)
+                loss = self.criterion(outputs, labels)
+                loss.backward()
                 running_loss[mode] += loss.item()
+                self.optimizer.step()
+            self.batchers[mode].reset(with_shuffle=True)
 
-                preds = torch.sigmoid(outputs)
-                predicted_label = [0 if item < 0.5 else 1 for item in preds.squeeze().tolist()]
-                poolers[mode].set('epoch{}-x'.format(e+1), x_batch)
-                poolers[mode].set('epoch{}-y'.format(e+1), y_batch)
-                poolers[mode].set('epoch{}-logits'.format(e+1), outputs.squeeze().tolist())
-                poolers[mode].set('epoch{}-preds'.format(e+1), preds.squeeze().tolist())
-                poolers[mode].set('epoch{}-predicted_label'.format(e+1), predicted_label)
+            mode = self.VALID_MODE
+            self.model.eval()
+            with torch.no_grad():
+                while not self.batchers[mode].is_batch_end():
+                    x_batch, y_batch = self.batchers[mode].get_batch()
+                    outputs = self.model(x_batch)
+                    labels = torch.Tensor(y_batch).float().unsqueeze(1).to(self.device)
+                    loss = self.criterion(outputs, labels)
+                    running_loss[mode] += loss.item()
 
-        metrics = get_metrics(poolers[mode].get('epoch{}-predicted_label'.format(e+1)), poolers[mode].get('epoch{}-y'.format(e+1)))
-        poolers[mode].set('epoch{}-metrics'.format(e+1), metrics)
-        poolers[mode].set('epoch{}-train_loss'.format(e+1), running_loss[TRAIN_MODE])
-        poolers[mode].set('epoch{}-valid_loss'.format(e+1), running_loss[VALID_MODE])
-        valuewatcher.update(metrics['f1'])
-        batchers[mode].reset(with_shuffle=False)
+                    preds = torch.sigmoid(outputs)
+                    predicted_label = [0 if item < 0.5 else 1 for item in preds.squeeze().tolist()]
+                    self.poolers[mode].set('epoch{}-x'.format(e + 1), x_batch)
+                    self.poolers[mode].set('epoch{}-y'.format(e + 1), y_batch)
+                    self.poolers[mode].set('epoch{}-logits'.format(e + 1), outputs.squeeze().tolist())
+                    self.poolers[mode].set('epoch{}-preds'.format(e + 1), preds.squeeze().tolist())
+                    self.poolers[mode].set('epoch{}-predicted_label'.format(e + 1), predicted_label)
 
-        now = get_now()
-        text_line = '|'.join(['{} {}: {:.3f}'.format(mode, key, 100 * metrics[key]) if key not in set(['tp', 'fp', 'fn', 'tn']) else '{} {}: {}'.format(mode, key, metrics[key]) for key in get_print_keys()])
-        print('{}|epoch: {:3d}|train loss: {:.2f}|valid loss: {:.2f}|{}'.format(now, e+1, running_loss[TRAIN_MODE], running_loss[VALID_MODE], text_line))
+            metrics = get_metrics(self.poolers[mode].get('epoch{}-predicted_label'.format(e + 1)),
+                                  self.poolers[mode].get('epoch{}-y'.format(e + 1)))
+            self.poolers[mode].set('epoch{}-metrics'.format(e + 1), metrics)
+            self.poolers[mode].set('epoch{}-train_loss'.format(e + 1), running_loss[self.TRAIN_MODE])
+            self.poolers[mode].set('epoch{}-valid_loss'.format(e + 1), running_loss[self.VALID_MODE])
+            self.valuewatcher.update(metrics['f1'])
+            self.batchers[mode].reset(with_shuffle=False)
 
-        if valuewatcher.is_over():
-            break
+            now = get_now()
+            text_line = '|'.join(['{} {}: {:.3f}'.format(mode, key, 100 * metrics[key])
+                                  if key not in set(['tp', 'fp', 'fn', 'tn'])
+                                  else '{} {}: {}'.format(mode, key, metrics[key])
+                                  for key in get_print_keys()])
+            print('{}|epoch: {:3d}|train loss: {:.2f}|valid loss: {:.2f}|{}'.format(now,
+                                                                                    e + 1,
+                                                                                    running_loss[self.TRAIN_MODE],
+                                                                                    running_loss[self.VALID_MODE],
+                                                                                    text_line))
+
+            if self.valuewatcher.is_over():
+                break
+        return metrics['f1']
+
+
+class HyperparameterSearcher:
+    def __init__(self):
+        self.direction = 'maximize'
+        self.sampler = TPESampler(seed=int(get_milliseconds()))
+        self.study_name = 'test'
+        # study = optuna.create_study(study_name=study_name, sampler=sampler, direction=direction, storage='sqlite:///./results/hyp-search.db', load_if_exists=True)
+        self.study = optuna.create_study(study_name=self.study_name, sampler=self.sampler, direction=self.direction)
+
+    def get_hyperparameters(self, trial):
+        hyper_params = {}
+        hyper_params['optimizer_type'] = trial.suggest_categorical('optimizer', ['sgd', 'adam'])
+        hyper_params['learning_ratio'] = trial.suggest_loguniform('learning_rate', 1e-5, 5e-1)
+        hyper_params['gradient_clip'] = trial.suggest_uniform('gradient_clip', 0.0, 5.0)
+        hyper_params['weight_decay'] = trial.suggest_uniform('weight_decay', 0.0, 1.0)
+        hyper_params['dropout_ratio'] = trial.suggest_uniform('dropout_ratio', 0.0, 1.0)
+        hyper_params['num_head'] = trial.suggest_int('num_head', 1, 16, 1)
+        return hyper_params
+
+    def objective(self, trial):
+        hyper_params = self.get_hyperparameters(trial=trial)
+        runner = Runner(hyper_params=hyper_params, device='cuda:0')
+        score = runner.run()
+        return score
+
+    def run(self):
+        self.study.optimize(self.objective,
+                            n_trials=10000,
+                            catch=(ValueError,),
+                            n_jobs=4)
+        print(self.study.best_params)
+
+
+
+if __name__ == '__main__':
+    hyps = HyperparameterSearcher()
+    hyps.run()
+    # device = 'cuda:3'
+    # factory = Factory(device=device).generate()
+    # model, batchers, optimizer, criterion = factory['model'], factory['batchers'], factory['optimizer'], factory['criterion']
+    # TRAIN_MODE, VALID_MODE = 'train', 'valid'
+    # batchers = {TRAIN_MODE: batchers[TRAIN_MODE], VALID_MODE: batchers[VALID_MODE]}
+    # poolers = {VALID_MODE: DataPooler()}
+    # valuewatcher = ValueWatcher()
+    # epochs = 100
+    #
+    # for e in range(epochs):
+    #     running_loss = {key: 0.0 for key in [TRAIN_MODE, VALID_MODE]}
+    #
+    #     mode = TRAIN_MODE
+    #     model.train()
+    #     while not batchers[mode].is_batch_end():
+    #         optimizer.zero_grad()
+    #         x_batch, y_batch = batchers[mode].get_batch()
+    #         outputs = model(x_batch)
+    #         labels = torch.Tensor(y_batch).float().unsqueeze(1).to(device)
+    #         loss = criterion(outputs, labels)
+    #         loss.backward()
+    #         running_loss[mode] += loss.item()
+    #         optimizer.step()
+    #     batchers[mode].reset(with_shuffle=True)
+    #
+    #     mode = VALID_MODE
+    #     model.eval()
+    #     with torch.no_grad():
+    #         while not batchers[mode].is_batch_end():
+    #             x_batch, y_batch = batchers[mode].get_batch()
+    #             outputs = model(x_batch)
+    #             labels = torch.Tensor(y_batch).float().unsqueeze(1).to(device)
+    #             loss = criterion(outputs, labels)
+    #             running_loss[mode] += loss.item()
+    #
+    #             preds = torch.sigmoid(outputs)
+    #             predicted_label = [0 if item < 0.5 else 1 for item in preds.squeeze().tolist()]
+    #             poolers[mode].set('epoch{}-x'.format(e+1), x_batch)
+    #             poolers[mode].set('epoch{}-y'.format(e+1), y_batch)
+    #             poolers[mode].set('epoch{}-logits'.format(e+1), outputs.squeeze().tolist())
+    #             poolers[mode].set('epoch{}-preds'.format(e+1), preds.squeeze().tolist())
+    #             poolers[mode].set('epoch{}-predicted_label'.format(e+1), predicted_label)
+    #
+    #     metrics = get_metrics(poolers[mode].get('epoch{}-predicted_label'.format(e+1)), poolers[mode].get('epoch{}-y'.format(e+1)))
+    #     poolers[mode].set('epoch{}-metrics'.format(e+1), metrics)
+    #     poolers[mode].set('epoch{}-train_loss'.format(e+1), running_loss[TRAIN_MODE])
+    #     poolers[mode].set('epoch{}-valid_loss'.format(e+1), running_loss[VALID_MODE])
+    #     valuewatcher.update(metrics['f1'])
+    #     batchers[mode].reset(with_shuffle=False)
+    #
+    #     now = get_now()
+    #     text_line = '|'.join(['{} {}: {:.3f}'.format(mode, key, 100 * metrics[key]) if key not in set(['tp', 'fp', 'fn', 'tn']) else '{} {}: {}'.format(mode, key, metrics[key]) for key in get_print_keys()])
+    #     print('{}|epoch: {:3d}|train loss: {:.2f}|valid loss: {:.2f}|{}'.format(now, e+1, running_loss[TRAIN_MODE], running_loss[VALID_MODE], text_line))
+    #
+    #     if valuewatcher.is_over():
+    #         break
 
 
 '''

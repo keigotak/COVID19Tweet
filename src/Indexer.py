@@ -1,12 +1,11 @@
-from nltk.corpus import stopwords
 from ekphrasis.classes.preprocessor import TextPreProcessor
 from ekphrasis.classes.tokenizer import SocialTokenizer
 from ekphrasis.dicts.emoticons import emoticons
 from TweetNormalizer import normalizeTweet
-
+from HelperFunctions import get_stop_words
 
 class Indexer:
-    def __init__(self, special_tokens={'<s>': 0, '<unk>': 1, '<pad>': 2, '<\s>': 3, '<mask>': 4}, with_preprocess=True, lower_count=10):
+    def __init__(self, special_tokens={'<s>': 0, '<unk>': 1, '<pad>': 2, '<\s>': 3, '<mask>': 4}, with_preprocess=True, lower_count=10, stop_words=None):
         if special_tokens is None:
             self.word2index = {'<unk>': 0, '<pad>': 1}
             self.current = 2
@@ -28,11 +27,10 @@ class Indexer:
         self.lower_count = lower_count
         self.max_length = 0
 
-        self.stop_words = set(stopwords.words('english'))
-        # self.stop_words |= set(
-        #     ['<hashtag>', '</hashtag>', '<allcaps>', '</allcaps>', '<user>', 'covid19', 'coronavirus', 'covid',
-        #      '<number>', 'httpurl', 19, '19'])
-        # self.stop_words |= set(["'", '"', ':', ';', '.', ',', '-', '!', '?', "'s", "<", ">", "(", ")", "/"])
+        if stop_words is None:
+            self.stop_words = get_stop_words()
+        else:
+            self.stop_words = set(stop_words)
 
         self.text_processor = TextPreProcessor(
             # terms that will be normalized
@@ -145,6 +143,7 @@ class Indexer:
 
     def text_to_words(self, index_text):
         return [self.sentence_to_words(indexes) for indexes in index_text]
+
 
 
 if __name__ == '__main__':

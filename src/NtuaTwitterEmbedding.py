@@ -6,7 +6,7 @@ from Indexer import Indexer
 
 
 class NtuaTwitterEmbedding(nn.Module):
-    def __init__(self, device):
+    def __init__(self, device, stop_words=None):
         super(NtuaTwitterEmbedding, self).__init__()
         self.path = Path('../data/models/ntua-slp-semeval2018/ntua_twitter_300.txt')
         with self.path.open('r', encoding='utf-8-sig') as f:
@@ -15,7 +15,7 @@ class NtuaTwitterEmbedding(nn.Module):
         contents = [text.strip().split(' ') for text in texts[1:]]
         vocab = [content[0] for content in contents]
         weights = [list(map(float, content[1:])) for content in contents]
-        self.indexer = Indexer(special_tokens={'<s>': 0, '<unk>': 1, '<pad>': 2, '<\s>': 3, '<mask>': 4}, with_preprocess=False)
+        self.indexer = Indexer(special_tokens={'<s>': 0, '<unk>': 1, '<pad>': 2, '<\s>': 3, '<mask>': 4}, with_preprocess=False, stop_words=stop_words)
         for word in vocab:
             self.indexer.count_word(word)
             self.indexer.add_word(word)

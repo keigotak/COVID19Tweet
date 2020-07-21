@@ -1,10 +1,15 @@
 from pathlib import Path
 from datetime import datetime
+from nltk.corpus import stopwords
 
 
 def get_now():
     dt_now = datetime.now()
     return dt_now.strftime('%Y.%m.%d %H:%M:%S')
+
+
+def get_milliseconds():
+    return datetime.now().strftime('%f')
 
 
 def get_label_text(num):
@@ -73,6 +78,13 @@ def generate_vocabjson():
             f.write('"{}": "{}",\n'.format(word, count))
             count += 1
 
+
+def get_stop_words():
+    return set(stopwords.words('english'))
+    # self.stop_words |= set(
+    #     ['<hashtag>', '</hashtag>', '<allcaps>', '</allcaps>', '<user>', 'covid19', 'coronavirus', 'covid',
+    #      '<number>', 'httpurl', 19, '19'])
+    # self.stop_words |= set(["'", '"', ':', ';', '.', ',', '-', '!', '?', "'s", "<", ">", "(", ")", "/"])
 
 
 

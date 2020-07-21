@@ -73,7 +73,7 @@ def probe_vocabs():
                 multi_stats[n_gram]['ann_texts'][tag].extend([['_'.join(words[i: i+n_gram]) for i in range(0, len(words) - n_gram + 1)]])
                 del_words = [word for word in words if word not in del_items]
                 multi_stats[n_gram]['del_texts'][tag].extend([['_'.join(del_words[i: i+n_gram]) for i in range(0, len(del_words) - n_gram + 1)]])
-                if n_gram != 1:
+                if n_gram != 0:
                     words = del_words
                 for word in ['_'.join(words[i: i+n_gram]) for i in range(0, len(words) - n_gram + 1)]:
                     multi_stats[n_gram]['vocabs'][tag].add(word)
