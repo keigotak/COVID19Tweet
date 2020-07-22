@@ -173,6 +173,7 @@ class Runner:
         self.hyper_params = factory.hyper_params
 
     def run(self):
+        best_score = 0.0
         for e in range(self.epochs):
             running_loss = {key: 0.0 for key in [self.TRAIN_MODE, self.VALID_MODE]}
 
@@ -234,10 +235,11 @@ class Runner:
                 self.best_results['epoch'] = e + 1
                 self.best_results['train_loss'] = running_loss[self.TRAIN_MODE]
                 self.best_results['valid_loss'] = running_loss[self.VALID_MODE]
+                best_score = self.best_results['f1']
 
         self.export_results()
 
-        return self.best_results['f1']
+        return best_score
 
     def export_results(self):
         if len(self.best_results) > 0:
