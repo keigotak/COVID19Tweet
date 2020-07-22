@@ -294,13 +294,12 @@ class HyperparameterSearcher:
         print(self.study.best_params)
 
 
-
 if __name__ == '__main__':
-    runner = Runner()
-    score = runner.run()
+    # runner = Runner()
+    # score = runner.run()
 
-    # hyps = HyperparameterSearcher()
-    # hyps.run()
+    hyps = HyperparameterSearcher()
+    hyps.run()
 
 
 
