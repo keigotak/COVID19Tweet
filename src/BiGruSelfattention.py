@@ -242,7 +242,7 @@ class Runner:
     def export_results(self):
         if len(self.best_results) > 0:
             path = get_results_path('hyp')
-            with path.open('w', encoding='utf-8-sig') as f:
+            with path.open('a', encoding='utf-8-sig') as f:
                 while True:
                     try:
                         # ロックが取得できなかったときはブロックしない => IOError
