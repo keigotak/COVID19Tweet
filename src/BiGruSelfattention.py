@@ -28,6 +28,7 @@ tokenizer = get_tokenizer()
 class BiGruSelfattention(nn.Module):
     def __init__(self, device='cpu', hyper_params=None):
         super(BiGruSelfattention, self).__init__()
+        self.hyper_params = hyper_params
         self.embeddings = nn.ModuleList([self.__get_embeddings(key=key, device=device, stop_words=stop_words, tokenizer=tokenizer) for key in self.__get_embedding_keys()])
 
         emb_dim = sum([item.embedding_dim for item in self.embeddings])
@@ -87,12 +88,9 @@ class BiGruSelfattention(nn.Module):
         output = self.output(pooled_logits)
         return output
 
-    @staticmethod
-    def __get_embedding_keys():
+    def __get_embedding_keys(self):
         # return ['ntua', 'stanford', 'raw', 'position']
-        # return ['position']
-        # return ['ntua']
-        return ['raw']
+        return self.hyper_params['embeddings']
 
     @staticmethod
     def __get_embeddings(key, device, stop_words, tokenizer):
@@ -147,7 +145,8 @@ class Factory(BaseFactory):
                         'weight_decay': 0.0,
                         'clip_grad_nurm': 0.0,
                         'optimizer': 'sgd',
-                        'momentum': 0.0
+                        'momentum': 0.0,
+                        'embeddings': ['ntua']
                         }
         return hyper_params
 
@@ -243,7 +242,7 @@ class Runner:
     def export_results(self):
         if len(self.best_results) > 0:
             path = get_results_path('hyp')
-            with path.open('wt', encoding='utf-8-sig') as f:
+            with path.open('w', encoding='utf-8-sig') as f:
                 while True:
                     try:
                         # ロックが取得できなかったときはブロックしない => IOError
@@ -253,17 +252,19 @@ class Runner:
                         continue
                     else:
                         hyper_params = '|'.join(['{}:{}'.format(key, self.hyper_params[key]) for key in get_hyperparameter_keys()])
-                        print(','.join([os.path.basename(__file__)] + [self.best_results[key] for key in ['now', 'epoch', 'train_loss', 'valid_loss'] + get_print_keys()] + [hyper_params]), file=f, end='\n')
+                        f.write(','.join([os.path.basename(__file__)] + [str(self.best_results[key]) for key in ['date', 'epoch', 'train_loss', 'valid_loss'] + get_print_keys()] + [hyper_params]))
+                        f.write('\n')
                         time.sleep(3)
                         fcntl.flock(f, fcntl.LOCK_UN)
                         break
 
 
 class HyperparameterSearcher:
-    def __init__(self):
+    def __init__(self, device='cuda:0'):
         self.direction = 'maximize'
         self.sampler = TPESampler(seed=int(get_milliseconds()))
         self.study_name = 'test'
+        self.device = device
         # study = optuna.create_study(study_name=study_name, sampler=sampler, direction=direction, storage='sqlite:///./results/hyp-search.db', load_if_exists=True)
         self.study = optuna.create_study(study_name=self.study_name, sampler=self.sampler, direction=self.direction)
 
@@ -281,7 +282,7 @@ class HyperparameterSearcher:
 
     def objective(self, trial):
         hyper_params = self.get_hyperparameters(trial=trial)
-        runner = Runner(hyper_params=hyper_params, device='cuda:0')
+        runner = Runner(hyper_params=hyper_params, device=self.device)
         score = runner.run()
         return score
 

@@ -123,5 +123,20 @@ def get_tokenizer():
     )
 
 
+def get_results_path(tag=''):
+    return Path('../data/results/results-{}.csv'.format(tag))
+
+
+def get_hyperparameter_keys():
+    return ['lr',
+            'num_head',
+            'dropout_ratio',
+            'train_batch_size',
+            'weight_decay',
+            'clip_grad_nurm',
+            'optimizer',
+            'momentum']
+
+
 if __name__ == "__main__":
     generate_vocabjson()
