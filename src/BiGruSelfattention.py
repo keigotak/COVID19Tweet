@@ -237,7 +237,7 @@ class Runner:
 
         self.export_results()
 
-        return metrics['f1']
+        return self.best_results['f1']
 
     def export_results(self):
         if len(self.best_results) > 0:
