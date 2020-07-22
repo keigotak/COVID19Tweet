@@ -1,4 +1,7 @@
 import copy
+import fcntl
+import time
+import os
 
 import torch
 import torch.nn as nn
@@ -16,7 +19,7 @@ from Batcher import Batcher
 from DataPooler import DataPooler
 from ValueWatcher import ValueWatcher
 from Metrics import get_metrics, get_print_keys
-from HelperFunctions import get_now, get_milliseconds, get_datasets, get_stop_words, get_tokenizer
+from HelperFunctions import get_now, get_milliseconds, get_datasets, get_stop_words, get_tokenizer, get_results_path, get_hyperparameter_keys
 
 stop_words = get_stop_words()
 tokenizer = get_tokenizer()
@@ -159,13 +162,16 @@ class Factory(BaseFactory):
 class Runner:
     def __init__(self, device='cuda:0', hyper_params={}):
         self.device = device
-        factory = Factory(device=self.device, hyper_params=hyper_params).generate()
-        self.model, self.batchers, self.optimizer, self.criterion = [factory[key] for key in ['model', 'batchers', 'optimizer', 'criterion']]
+        factory = Factory(device=self.device, hyper_params=hyper_params)
+        factory_items = factory.generate()
+        self.model, self.batchers, self.optimizer, self.criterion = [factory_items[key] for key in ['model', 'batchers', 'optimizer', 'criterion']]
         self.TRAIN_MODE, self.VALID_MODE = 'train', 'valid'
         self.batchers = {self.TRAIN_MODE: self.batchers[self.TRAIN_MODE], self.VALID_MODE: self.batchers[self.VALID_MODE]}
         self.poolers = {self.VALID_MODE: DataPooler()}
         self.valuewatcher = ValueWatcher()
         self.epochs = 100
+        self.best_results = {}
+        self.hyper_params = factory.hyper_params
 
     def run(self):
         for e in range(self.epochs):
@@ -223,12 +229,34 @@ class Runner:
 
             if self.valuewatcher.is_over():
                 break
+            if self.valuewatcher.is_updated():
+                self.best_results = metrics
+                self.best_results['date'] = now
+                self.best_results['epoch'] = e + 1
+                self.best_results['train_loss'] = running_loss[self.TRAIN_MODE]
+                self.best_results['valid_loss'] = running_loss[self.VALID_MODE]
+
+        self.export_results()
+
         return metrics['f1']
 
     def export_results(self):
-        pass
-
-
+        if len(self.best_results) > 0:
+            path = get_results_path('hyp')
+            with path.open('wt', encoding='utf-8-sig') as f:
+                while True:
+                    try:
+                        # ロックが取得できなかったときはブロックしない => IOError
+                        fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    except IOError:
+                        time.sleep(0.5)
+                        continue
+                    else:
+                        hyper_params = '|'.join(['{}:{}'.format(key, self.hyper_params[key]) for key in get_hyperparameter_keys()])
+                        print(','.join([os.path.basename(__file__)] + [self.best_results[key] for key in ['now', 'epoch', 'train_loss', 'valid_loss'] + get_print_keys()] + [hyper_params]), file=f, end='\n')
+                        time.sleep(3)
+                        fcntl.flock(f, fcntl.LOCK_UN)
+                        break
 
 
 class HyperparameterSearcher:
@@ -242,11 +270,13 @@ class HyperparameterSearcher:
     def get_hyperparameters(self, trial):
         hyper_params = {}
         hyper_params['optimizer_type'] = trial.suggest_categorical('optimizer', ['sgd', 'adam'])
-        hyper_params['learning_ratio'] = trial.suggest_loguniform('learning_rate', 1e-5, 5e-1)
+        hyper_params['lr'] = trial.suggest_loguniform('lr', 1e-5, 5e-1)
         hyper_params['gradient_clip'] = trial.suggest_uniform('gradient_clip', 0.0, 5.0)
         hyper_params['weight_decay'] = trial.suggest_uniform('weight_decay', 0.0, 1.0)
         hyper_params['dropout_ratio'] = trial.suggest_uniform('dropout_ratio', 0.0, 1.0)
         hyper_params['num_head'] = trial.suggest_int('num_head', 1, 16, 1)
+        if hyper_params['optimizer_type'] == 'sgd':
+            hyper_params['momentum'] = trial.suggest_uniform('momentum', 0.0, 5.0)
         return hyper_params
 
     def objective(self, trial):
