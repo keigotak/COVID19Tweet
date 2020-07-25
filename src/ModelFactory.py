@@ -10,7 +10,7 @@ from Cnn import Cnn
 
 class ModelFactory(AbstractFactory):
     def __init__(self, device='cpu', hyper_params={}):
-        super(ModelFactory, self).__init__()
+        super().__init__()
         self.hyper_params = self.init_hyperparameters()
         self.hyper_params = {key: hyper_params[key] if key in hyper_params.keys() else val for key, val in self.hyper_params.items()}
 
