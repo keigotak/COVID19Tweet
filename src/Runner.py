@@ -1,4 +1,5 @@
 import os
+import time
 
 import torch
 
@@ -99,10 +100,15 @@ class Runner:
 
     def export_results(self):
         path = get_results_path('hyp')
-        with path.open('a', encoding='utf-8-sig') as f:
-            hyper_params = '|'.join(['{}:{}'.format(key, self.hyper_params[key]) for key in get_hyperparameter_keys()])
-            f.write(','.join([os.path.basename(__file__)] + [str(self.best_results[key]) for key in ['date', 'epoch', 'train_loss', 'valid_loss'] + get_print_keys()] + [hyper_params]))
-            f.write('\n')
+        while True:
+            try:
+                with path.open('a', encoding='utf-8-sig') as f:
+                    hyper_params = '|'.join(['{}:{}'.format(key, self.hyper_params[key]) for key in get_hyperparameter_keys()])
+                    f.write(','.join([os.path.basename(__file__)] + [str(self.best_results[key]) for key in ['date', 'epoch', 'train_loss', 'valid_loss'] + get_print_keys()] + [hyper_params]))
+                    f.write('\n')
+            except IOError:
+                time.sleep(0.5)
+                break
 
 
 if __name__ == '__main__':
