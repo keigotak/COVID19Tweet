@@ -1,14 +1,23 @@
+import random
+import numpy as np
 from pathlib import Path
 from datetime import datetime
 
-from nltk.corpus import stopwords
-from ekphrasis.classes.preprocessor import TextPreProcessor
-from ekphrasis.classes.tokenizer import SocialTokenizer
-from ekphrasis.dicts.emoticons import emoticons
+import torch
 
 
-def get_now():
+def set_seed(seed=97):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    # cuda でのRNGを初期化
+    torch.cuda.manual_seed(seed)
+
+
+def get_now(with_path=False):
     dt_now = datetime.now()
+    if with_path:
+        return dt_now.strftime('%Y%m%d%H%M%S')
     return dt_now.strftime('%Y.%m.%d %H:%M:%S')
 
 
@@ -83,48 +92,14 @@ def generate_vocabjson():
             count += 1
 
 
-def get_stop_words():
-    return set(stopwords.words('english'))
-    # self.stop_words |= set(
-    #     ['<hashtag>', '</hashtag>', '<allcaps>', '</allcaps>', '<user>', 'covid19', 'coronavirus', 'covid',
-    #      '<number>', 'httpurl', 19, '19'])
-    # self.stop_words |= set(["'", '"', ':', ';', '.', ',', '-', '!', '?', "'s", "<", ">", "(", ")", "/"])
-
-
-def get_tokenizer():
-    return TextPreProcessor(
-        # terms that will be normalized
-        normalize=['url', 'email', 'percent', 'money', 'phone', 'user',
-                   'time', 'date', 'number'],
-        # terms that will be annotated
-        annotate={"hashtag", "allcaps", "elongated", "repeated",
-                  'emphasis', 'censored'},
-        fix_html=True,  # fix HTML tokens
-
-        # corpus from which the word statistics are going to be used
-        # for word segmentation
-        segmenter="twitter",
-
-        # corpus from which the word statistics are going to be used
-        # for spell correction
-        corrector="twitter",
-
-        unpack_hashtags=True,  # perform word segmentation on hashtags
-        unpack_contractions=True,  # Unpack contractions (can't -> can not)
-        spell_correct_elong=False,  # spell correction for elongated words
-
-        # select a tokenizer. You can use SocialTokenizer, or pass your own
-        # the tokenizer, should take as input a string and return a list of tokens
-        tokenizer=SocialTokenizer(lowercase=True).tokenize,
-
-        # list of dictionaries, for replacing tokens extracted from the text,
-        # with other expressions. You can pass more than one dictionaries.
-        dicts=[emoticons]
-    )
-
-
 def get_results_path(tag=''):
     return Path('../data/results/results-{}.csv'.format(tag))
+
+
+def get_save_model_path(dir_tag, file_tag=''):
+    dt_now = datetime.now()
+    now = dt_now.strftime('%Y%m%d_%H%M%S')
+    return Path('../data/results/{}/{}{}.pkl'.format(dir_tag, now, file_tag))
 
 
 def get_hyperparameter_keys():
@@ -135,7 +110,8 @@ def get_hyperparameter_keys():
             'weight_decay',
             'clip_grad_nurm',
             'optimizer',
-            'momentum']
+            'momentum',
+            'model']
 
 
 if __name__ == "__main__":

@@ -1,9 +1,9 @@
-from TweetNormalizer import normalizeTweet
-from HelperFunctions import get_stop_words, get_tokenizer
+from StopWords import StopWords
+from Tokenizer import Tokenizer
 
 
 class Indexer:
-    def __init__(self, special_tokens={'<s>': 0, '<unk>': 1, '<pad>': 2, '<\s>': 3, '<mask>': 4}, with_preprocess=True, lower_count=10, stop_words=None, tokenizer=None):
+    def __init__(self, special_tokens={'<s>': 0, '<unk>': 1, '<pad>': 2, '<\s>': 3, '<mask>': 4}, with_preprocess=True, lower_count=10):
         if special_tokens is None:
             self.word2index = {'<unk>': 0, '<pad>': 1}
             self.current = 2
@@ -25,24 +25,15 @@ class Indexer:
         self.lower_count = lower_count
         self.max_length = 0
 
-        if stop_words is None:
-            self.stop_words = get_stop_words()
-        else:
-            self.stop_words = set(stop_words)
-
-        if tokenizer is None:
-            self.text_processor = get_tokenizer()
-        else:
-            self.text_processor = tokenizer
-        # self.text_processor = normalizeTweet
+        self.stop_words = StopWords().get_instance()
+        self.text_processor = Tokenizer().get_instance()
 
     def __len__(self):
         return self.current
 
     def tokenize(self, sentence):
         if self.with_preprocess:
-            sentence = [word for word in self.text_processor.pre_process_doc(sentence) if word not in self.stop_words]
-            # sentence = [word for word in self.text_processor(sentence) if word not in self.stop_words]
+            sentence = [word for word in self.text_processor(sentence) if word not in self.stop_words]
         else:
             sentence = sentence.strip().split(' ')
         return sentence
@@ -116,7 +107,6 @@ class Indexer:
 
     def text_to_words(self, index_text):
         return [self.sentence_to_words(indexes) for indexes in index_text]
-
 
 
 if __name__ == '__main__':

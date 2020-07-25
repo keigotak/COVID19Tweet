@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import torch
 import torch.nn as nn
 
@@ -6,13 +8,14 @@ from NtuaTwitterEmbedding import NtuaTwitterEmbedding
 from StanfordTwitterEmbedding import StanfordTwitterEmbedding
 from AbsolutePositionalEmbedding import AbsolutePositionalEmbedding
 from Attention import Attention
+from StopWords import StopWords
 
 
-class BiGruSelfattention(nn.Module):
+class BiGruSelfattentionWithCheating(nn.Module):
     def __init__(self, device='cpu', hyper_params=None):
-        super(BiGruSelfattention, self).__init__()
+        super(BiGruSelfattentionWithCheating, self).__init__()
         self.hyper_params = hyper_params
-        self.embeddings = nn.ModuleList([self.__get_embeddings(key=key, device=device) for key in self.__get_embedding_keys()])
+        self.embeddings = nn.ModuleList([self.__get_embeddings(key=key, device=device, stop_words=stop_words, tokenizer=tokenizer) for key in self.__get_embedding_keys()])
 
         emb_dim = sum([item.embedding_dim for item in self.embeddings])
         self.hidden_size = emb_dim
@@ -27,10 +30,16 @@ class BiGruSelfattention(nn.Module):
         self.dropout = nn.Dropout(hyper_params['dropout_ratio'])
 
         self.pooling = nn.AdaptiveAvgPool1d(1)
-        self.output = nn.Linear(emb_dim, 1)
+        self.output = nn.Linear(emb_dim + 1, 1)
 
         self.device = device
         self.to(device)
+
+        with Path('../data/utils/cheatsheet.txt').open('r', encoding='utf-8-sig') as f:
+            self.cheatsheet = set([line.strip() for line in f.readlines()])
+
+        self.added_stop_words = StopWords(with_applied=True).get_instance()
+
 
     def forward(self, batch_sentence):
         embeddings = [embedding(batch_sentence) for embedding in self.embeddings]
@@ -68,42 +77,42 @@ class BiGruSelfattention(nn.Module):
         avg_seq_logits = avg_seq_logits / self.num_head
 
         pooled_logits = self.pooling(avg_seq_logits.transpose(2, 1)).transpose(2, 1).squeeze()
-        output = self.output(pooled_logits)
+
+        cheat_scores = self.__cheating_output(batch_sentence=batch_sentence)
+        output = self.output(torch.cat((pooled_logits, torch.tensor(cheat_scores).unsqueeze(1).float().to(self.device)), dim=1))
         return output
 
     def __get_embedding_keys(self):
         # return ['ntua', 'stanford', 'raw', 'position']
         return self.hyper_params['embeddings']
 
+    def __cheating_output(self, batch_sentence):
+        cheating_scores = []
+
+        for sentence in batch_sentence:
+            words = tokenizer.pre_process_doc(sentence)
+            del_words = [word for word in words if word not in self.added_stop_words]
+            tri_grams = ['_'.join([del_words[i], del_words[i+1], del_words[i+2]]) for i in range(len(del_words[:-2]))]
+
+            if len(set(tri_grams) & self.cheatsheet) >= 1:
+                cheating_scores.append(1)
+            else:
+                cheating_scores.append(0)
+
+        return cheating_scores
+
     @staticmethod
-    def __get_embeddings(key, device):
+    def __get_embeddings(key, device, stop_words, tokenizer):
         if key == 'ntua':
-            return NtuaTwitterEmbedding(device=device)
+            return NtuaTwitterEmbedding(device=device, stop_words=stop_words, tokenizer=tokenizer)
         elif key == 'stanford':
-            return StanfordTwitterEmbedding(device=device)
+            return StanfordTwitterEmbedding(device=device, stop_words=stop_words, tokenizer=tokenizer)
         elif key == 'raw':
-            return RawEmbedding(device=device)
+            return RawEmbedding(device=device, stop_words=stop_words, tokenizer=tokenizer)
         elif key == 'position':
             return AbsolutePositionalEmbedding(device=device)
 
 
 '''
- - with stanford twitter embedding 200d
-2020.07.09 18:22:50|epoch:   9|train loss: 388.35|valid loss: 99.32|valid f1: 82.573|valid precision: 80.894|valid recall: 84.322|valid accuracy: 83.200|valid tp: 398|valid fp: 94|valid fn: 74|valid tn: 434
-
- - with stanford twitter embedding 100d
-2020.07.09 15:38:28|epoch:   9|train loss: 496.90|valid loss: 103.71|valid f1: 81.206|valid precision: 77.247|valid recall: 85.593|valid accuracy: 81.300|valid tp: 404|valid fp: 119|valid fn: 68|valid tn: 409
-
- - with ntua twitter embedding
-2020.07.09 14:18:49|epoch:  17|train loss: 311.18|valid loss: 102.94|valid f1: 83.452|valid precision: 80.117|valid recall: 87.076|valid accuracy: 83.700|valid tp: 411|valid fp: 102|valid fn: 61|valid tn: 426
-
- - apply ekphrasis
-2020.07.09 02:02:37|epoch:  21|train loss: 253.24|valid loss: 146.71|valid f1: 81.186|valid precision: 78.458|valid recall: 84.110|valid accuracy: 81.600|valid tp: 397|valid fp: 109|valid fn: 75|valid tn: 419
-
- - add Tweet normalizer
-2020.07.03 20:04:02|epoch:  20|train loss: 319.42|valid loss: 140.92|valid f1: 81.307|valid precision: 78.501|valid recall: 84.322|valid accuracy: 81.700|valid tp: 398|valid fp: 109|valid fn: 74|valid tn: 419
-
- - with multi head
-2020.07.02 00:32:48|epoch:  12|train loss: 523.66|valid loss: 123.62|valid f1: 79.959|valid precision: 77.273|valid recall: 82.839|valid accuracy: 80.400|valid tp: 391|valid fp: 115|valid fn: 81|valid tn: 413
 '''
 

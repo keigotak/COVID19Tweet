@@ -3,8 +3,7 @@ import random
 
 class Batcher:
     def __init__(self, x, y, batch_size=4):
-        self.x = x
-        self.y = y
+        self.x, self.y = x, y
         self.current = 0
         self.batch_size = batch_size
 
