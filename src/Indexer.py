@@ -2,6 +2,22 @@ from StopWords import StopWords
 from Tokenizer import Tokenizer
 
 
+class SentenceIndexer:
+    __singleton = None
+    __sentence2indexes = None
+    __indexes2sentence = None
+
+    def __new__(cls):
+        if cls.__singleton is None:
+            cls.__singleton = super(SentenceIndexer, cls).__new__(cls)
+            cls.__sentence2indexes = {}
+            cls.__indexes2sentence = {}
+        return cls.__singleton
+
+    def get_instance(self):
+        return self.__sentence2indexes, self.__indexes2sentence
+
+
 class Indexer:
     def __init__(self, special_tokens={'<s>': 0, '<unk>': 1, '<pad>': 2, '<\s>': 3, '<mask>': 4}, with_preprocess=True, lower_count=10):
         if special_tokens is None:
@@ -13,8 +29,7 @@ class Indexer:
         self.index2word = {val: key for key, val in special_tokens.items()}
         self.vocab = set([key for key, val in special_tokens.items()])
 
-        self.sentence2indexes = {}
-        self.indexes2sentence ={}
+        self.sentence2indexes, self.indexes2sentence = SentenceIndexer().get_instance()
 
         self.padding_index = self.word2index['<pad>']
         self.unknown_index = self.word2index['<unk>']
