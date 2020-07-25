@@ -38,10 +38,18 @@ class AbstractFactory:
                         'weight_decay': 0.0,
                         'clip_grad_nurm': 0.0,
                         'optimizer': 'sgd',
-                        'momentum': 0.0,
                         'embeddings': ['ntua'],
-                        'model': 'simple'
+                        'model': 'gru'
                         }
+        if hyper_params['optimizer'] == 'sgd':
+            hyper_params['momentum'] = 0.0
+
+        if hyper_params['model'] == 'cnn':
+            hyper_params['kernel_size'] = 100
+            hyper_params['window_size1'] = 3
+            hyper_params['window_size2'] = 5
+            hyper_params['window_size3'] = 7
+
         return hyper_params
 
     def generate(self):

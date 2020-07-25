@@ -106,5 +106,5 @@ class Runner:
 
 
 if __name__ == '__main__':
-    runner = Runner(device='cuda:1')
+    runner = Runner(device='cuda:0')
     score = runner.run()

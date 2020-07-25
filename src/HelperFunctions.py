@@ -99,7 +99,9 @@ def get_results_path(tag=''):
 def get_save_model_path(dir_tag, file_tag=''):
     dt_now = datetime.now()
     now = dt_now.strftime('%Y%m%d_%H%M%S')
-    return Path('../data/results/{}/{}{}.pkl'.format(dir_tag, now, file_tag))
+    directory = Path('../data/results/{}'.format(dir_tag))
+    directory.mkdir(parents=True, exist_ok=True)
+    return directory / '{}{}.pkl'.format(now, file_tag)
 
 
 def get_hyperparameter_keys():

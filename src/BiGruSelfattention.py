@@ -1,18 +1,15 @@
 import torch
 import torch.nn as nn
 
-from RawEmbedding import RawEmbedding
-from NtuaTwitterEmbedding import NtuaTwitterEmbedding
-from StanfordTwitterEmbedding import StanfordTwitterEmbedding
-from AbsolutePositionalEmbedding import AbsolutePositionalEmbedding
+from AbstractModel import AbstractModel
 from Attention import Attention
 
 
-class BiGruSelfattention(nn.Module):
+class BiGruSelfattention(AbstractModel):
     def __init__(self, device='cpu', hyper_params=None):
-        super(BiGruSelfattention, self).__init__()
-        self.hyper_params = hyper_params
-        self.embeddings = nn.ModuleList([self.__get_embeddings(key=key, device=device) for key in self.__get_embedding_keys()])
+        sup = super()
+        sup.__init__(device=device, hyper_params=hyper_params)
+        self.embeddings = nn.ModuleList([sup.get_embeddings(key=key, device=device) for key in self.hyper_params['embeddings']])
 
         emb_dim = sum([item.embedding_dim for item in self.embeddings])
         self.hidden_size = emb_dim
@@ -29,7 +26,6 @@ class BiGruSelfattention(nn.Module):
         self.pooling = nn.AdaptiveAvgPool1d(1)
         self.output = nn.Linear(emb_dim, 1)
 
-        self.device = device
         self.to(device)
 
     def forward(self, batch_sentence):
@@ -70,21 +66,6 @@ class BiGruSelfattention(nn.Module):
         pooled_logits = self.pooling(avg_seq_logits.transpose(2, 1)).transpose(2, 1).squeeze()
         output = self.output(pooled_logits)
         return output
-
-    def __get_embedding_keys(self):
-        # return ['ntua', 'stanford', 'raw', 'position']
-        return self.hyper_params['embeddings']
-
-    @staticmethod
-    def __get_embeddings(key, device):
-        if key == 'ntua':
-            return NtuaTwitterEmbedding(device=device)
-        elif key == 'stanford':
-            return StanfordTwitterEmbedding(device=device)
-        elif key == 'raw':
-            return RawEmbedding(device=device)
-        elif key == 'position':
-            return AbsolutePositionalEmbedding(device=device)
 
 
 '''

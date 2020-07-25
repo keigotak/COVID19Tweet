@@ -3,19 +3,16 @@ from pathlib import Path
 import torch
 import torch.nn as nn
 
-from RawEmbedding import RawEmbedding
-from NtuaTwitterEmbedding import NtuaTwitterEmbedding
-from StanfordTwitterEmbedding import StanfordTwitterEmbedding
-from AbsolutePositionalEmbedding import AbsolutePositionalEmbedding
+from AbstractModel import AbstractModel
 from Attention import Attention
 from StopWords import StopWords
 
 
-class BiGruSelfattentionWithCheating(nn.Module):
+class BiGruSelfattentionWithCheating(AbstractModel):
     def __init__(self, device='cpu', hyper_params=None):
-        super(BiGruSelfattentionWithCheating, self).__init__()
-        self.hyper_params = hyper_params
-        self.embeddings = nn.ModuleList([self.__get_embeddings(key=key, device=device, stop_words=stop_words, tokenizer=tokenizer) for key in self.__get_embedding_keys()])
+        sup = super()
+        sup.__init__(device=device, hyper_params=hyper_params)
+        self.embeddings = nn.ModuleList([sup.get_embeddings(key=key, device=device) for key in self.hyper_params['embeddings']])
 
         emb_dim = sum([item.embedding_dim for item in self.embeddings])
         self.hidden_size = emb_dim
@@ -32,14 +29,12 @@ class BiGruSelfattentionWithCheating(nn.Module):
         self.pooling = nn.AdaptiveAvgPool1d(1)
         self.output = nn.Linear(emb_dim + 1, 1)
 
-        self.device = device
         self.to(device)
 
         with Path('../data/utils/cheatsheet.txt').open('r', encoding='utf-8-sig') as f:
             self.cheatsheet = set([line.strip() for line in f.readlines()])
 
         self.added_stop_words = StopWords(with_applied=True).get_instance()
-
 
     def forward(self, batch_sentence):
         embeddings = [embedding(batch_sentence) for embedding in self.embeddings]
@@ -82,10 +77,6 @@ class BiGruSelfattentionWithCheating(nn.Module):
         output = self.output(torch.cat((pooled_logits, torch.tensor(cheat_scores).unsqueeze(1).float().to(self.device)), dim=1))
         return output
 
-    def __get_embedding_keys(self):
-        # return ['ntua', 'stanford', 'raw', 'position']
-        return self.hyper_params['embeddings']
-
     def __cheating_output(self, batch_sentence):
         cheating_scores = []
 
@@ -100,17 +91,6 @@ class BiGruSelfattentionWithCheating(nn.Module):
                 cheating_scores.append(0)
 
         return cheating_scores
-
-    @staticmethod
-    def __get_embeddings(key, device, stop_words, tokenizer):
-        if key == 'ntua':
-            return NtuaTwitterEmbedding(device=device, stop_words=stop_words, tokenizer=tokenizer)
-        elif key == 'stanford':
-            return StanfordTwitterEmbedding(device=device, stop_words=stop_words, tokenizer=tokenizer)
-        elif key == 'raw':
-            return RawEmbedding(device=device, stop_words=stop_words, tokenizer=tokenizer)
-        elif key == 'position':
-            return AbsolutePositionalEmbedding(device=device)
 
 
 '''

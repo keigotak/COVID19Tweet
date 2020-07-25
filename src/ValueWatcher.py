@@ -22,14 +22,14 @@ class ValueWatcher:
             self.current = val
             self.is_new = False
             if self.mode == 'maximize':
-                if val > self.max_score:
+                if val >= self.max_score:
                     self.count = 0
                     self.max_score = val
                     self.is_new = True
                 else:
                     self.count += 1
             elif self.mode == 'minimize':
-                if val < self.min_score:
+                if val <= self.min_score:
                     self.count = 0
                     self.min_score = val
                     self.is_new = True

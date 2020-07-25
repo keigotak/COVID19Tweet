@@ -5,6 +5,7 @@ import torch
 from AbstractFactory import AbstractFactory
 from BiGruSelfattention import BiGruSelfattention
 from BiGruSelfattentionWithCheating import BiGruSelfattentionWithCheating
+from Cnn import Cnn
 
 
 class ModelFactory(AbstractFactory):
@@ -19,12 +20,17 @@ class ModelFactory(AbstractFactory):
         self.device = torch.device(device)
         if self.hyper_params['model'] == 'gru_with_cheating':
             self.model = BiGruSelfattentionWithCheating(device=self.device, hyper_params=self.hyper_params)
-        else:
+        elif self.hyper_params['model'] == 'gru':
             self.model = BiGruSelfattention(device=self.device, hyper_params=self.hyper_params)
+        elif self.hyper_params['model'] == 'cnn':
+            self.model = Cnn(device=self.device, hyper_params=self.hyper_params)
+        else:
+            self.model = None
         print(self.model)
 
         for parameter in self.model.parameters():
             if not parameter.requires_grad:
+                parameter.requires_grad = True
                 print(parameter)
 
         if self.hyper_params['optimizer'] == 'sgd':

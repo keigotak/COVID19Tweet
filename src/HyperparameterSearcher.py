@@ -25,6 +25,13 @@ class HyperparameterSearcher:
         hyper_params['num_head'] = trial.suggest_int('num_head', 1, 16, 1)
         if hyper_params['optimizer_type'] == 'sgd':
             hyper_params['momentum'] = trial.suggest_uniform('momentum', 0.0, 5.0)
+        hyper_params['model'] = trial.suggest_categorical('model', ['gru', 'gru_with_cheating', 'cnn'])
+        if hyper_params['model'] == 'cnn':
+            hyper_params['kernel_size'] = trial.suggest_int('kernel_size', 50, 300, 5)
+            hyper_params['window_size1'] = trial.suggest_int('window_size1', 3, 21, 2)
+            hyper_params['window_size2'] = trial.suggest_int('window_size2', 3, 21, 2)
+            hyper_params['window_size3'] = trial.suggest_int('window_size3', 3, 21, 2)
+
         return hyper_params
 
     def objective(self, trial):
