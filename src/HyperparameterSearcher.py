@@ -44,7 +44,7 @@ class HyperparameterSearcher:
         self.study.optimize(self.objective,
                             n_trials=10000,
                             catch=(ValueError,),
-                            n_jobs=8)
+                            n_jobs=1)
         print(self.study.best_params)
 
 

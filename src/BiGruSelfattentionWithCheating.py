@@ -5,6 +5,8 @@ import torch.nn as nn
 
 from AbstractModel import AbstractModel
 from Attention import Attention
+
+from Tokenizer import Tokenizer
 from StopWords import StopWords
 
 
@@ -35,6 +37,7 @@ class BiGruSelfattentionWithCheating(AbstractModel):
             self.cheatsheet = set([line.strip() for line in f.readlines()])
 
         self.added_stop_words = StopWords(with_applied=True).get_instance()
+        self.tokenizer = Tokenizer().get_instance()
 
     def forward(self, batch_sentence):
         embeddings = [embedding(batch_sentence) for embedding in self.embeddings]
@@ -81,7 +84,7 @@ class BiGruSelfattentionWithCheating(AbstractModel):
         cheating_scores = []
 
         for sentence in batch_sentence:
-            words = tokenizer.pre_process_doc(sentence)
+            words = self.tokenizer(sentence)
             del_words = [word for word in words if word not in self.added_stop_words]
             tri_grams = ['_'.join([del_words[i], del_words[i+1], del_words[i+2]]) for i in range(len(del_words[:-2]))]
 

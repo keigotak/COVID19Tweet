@@ -106,9 +106,9 @@ class Runner:
                     hyper_params = '|'.join(['{}:{}'.format(key, self.hyper_params[key]) for key in get_hyperparameter_keys()])
                     f.write(','.join([os.path.basename(__file__)] + [str(self.best_results[key]) for key in ['date', 'epoch', 'train_loss', 'valid_loss'] + get_print_keys()] + [hyper_params]))
                     f.write('\n')
+                    break
             except IOError:
                 time.sleep(0.5)
-                break
 
 
 if __name__ == '__main__':
