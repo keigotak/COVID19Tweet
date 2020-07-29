@@ -22,9 +22,8 @@ class Cnn(AbstractModel):
         self.dropout = nn.Dropout(hyper_params['dropout_ratio'])
         self.cnns = nn.ModuleList([nn.Conv1d(in_channels=self.hidden_size, out_channels=och, kernel_size=(ws,), stride=1, padding=pd) for ich, och, ws, pd in zip(self.input_chs, self.output_chs, self.window_sizes, self.padding_sizes)])
 
-        self.num_head = 5
-        self.num_layer = 6
-        # self.attentions = nn.ModuleList([nn.ModuleList([Attention(dimensions=self.kernel_size // self.num_head) for _ in range(self.num_head)]) for _ in range(self.num_layer)])
+        self.num_head = hyper_params['num_head']
+        self.num_layer = hyper_params['num_layer']
         self.attentions = nn.ModuleList([nn.MultiheadAttention(embed_dim=self.kernel_size, num_heads=self.num_head, dropout=hyper_params['dropout_ratio']) for _ in range(self.num_layer)])
         self.linears = nn.ModuleList([nn.Linear(self.kernel_size, self.kernel_size) for _ in range(self.num_layer)])
 
@@ -36,13 +35,9 @@ class Cnn(AbstractModel):
         embeddings = [embedding(batch_sentence) for embedding in self.embeddings]
         embeddings = torch.cat(embeddings, dim=2)
         batch_size = embeddings.shape[0]
-        max_len = embeddings.shape[1]
 
-        # feature_map = [torch.max_pool2d(torch.relu(layer(self.dropout(embeddings.unsqueeze(1)))), (max_len)).squeeze() for layer in self.cnns]
-        # feature_map = [torch.max_pool1d(torch.relu(layer(self.dropout(embeddings.unsqueeze(1)))).squeeze(), kernel_size=max_len).squeeze() for layer in self.cnns]
         feature_map = [torch.relu(layer(self.dropout(embeddings.transpose(2, 1)))) for layer in self.cnns]
         l = torch.cat(feature_map, dim=2)
-        # pooled_multi_feature_maps = F.max_pool2d(multi_feature_maps, kernel_size=(max_len, 1)).squeeze(2)
         l = l.transpose(2, 1)
 
         seq_logits, attention_weights = [], []
