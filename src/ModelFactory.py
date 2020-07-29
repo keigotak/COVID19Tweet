@@ -6,6 +6,7 @@ from Factory import Factory
 from BiGruSelfattention import BiGruSelfattention
 from BiGruSelfattentionWithCheating import BiGruSelfattentionWithCheating
 from Cnn import Cnn
+from SelfattentionEncoder import SelfattentionEncoder
 
 
 class ModelFactory:
@@ -25,6 +26,8 @@ class ModelFactory:
             self.model = BiGruSelfattention(device=self.device, hyper_params=self.hyper_params)
         elif self.hyper_params['model'] == 'cnn':
             self.model = Cnn(device=self.device, hyper_params=self.hyper_params)
+        elif self.hyper_params['model'] == 'selfattentionencoder':
+            self.model = SelfattentionEncoder(device=self.device, hyper_params=self.hyper_params)
         else:
             self.model = None
         print(self.model)
@@ -59,6 +62,10 @@ class ModelFactory:
             hyper_params['window_size1'] = 3
             hyper_params['window_size2'] = 5
             hyper_params['window_size3'] = 7
+            hyper_params['num_layer'] = 6
+        elif hyper_params['model'] == 'selfattentionencoder':
+            hyper_params['num_head'] = 10
+            hyper_params['num_layer'] = 6
 
         return hyper_params
 
