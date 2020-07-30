@@ -3,7 +3,7 @@ from optuna.samplers import TPESampler
 
 
 from Runner import Runner
-from HelperFunctions import get_milliseconds
+from HelperFunctions import get_milliseconds, get_now
 
 
 class HyperparameterSearcher:
@@ -37,7 +37,7 @@ class HyperparameterSearcher:
     def objective(self, trial):
         hyper_params = self.get_hyperparameters(trial=trial)
         runner = Runner(device=self.device, hyper_params=hyper_params)
-        score = runner.run()
+        score = runner.run(save_model_now=get_now(with_path=True))
         return score
 
     def run(self):

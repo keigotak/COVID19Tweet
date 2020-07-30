@@ -26,9 +26,10 @@ class Runner:
         self.best_results = {}
         self.hyper_params = factory.hyper_params
 
-    def run(self):
+    def run(self, save_model_now=None):
         best_score = 0.0
-        save_model_now = get_now(with_path=True)
+        if save_model_now is None:
+            save_model_now = get_now(with_path=True)
         for e in range(self.epochs):
             running_loss = {key: 0.0 for key in [self.TRAIN_MODE, self.VALID_MODE]}
 
