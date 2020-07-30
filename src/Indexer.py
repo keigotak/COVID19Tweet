@@ -87,9 +87,9 @@ class Indexer:
             for word in self.tokenize(sentence):
                 self.add_word(word)
 
-    def add_sentences(self, sentences):
+    def add_sentences(self, sentences, with_raw=False):
         for sentence in sentences:
-            self.add_sentence(sentence)
+            self.add_sentence(sentence, with_raw=with_raw)
 
     def get_index(self, word):
         if word in self.vocab:
