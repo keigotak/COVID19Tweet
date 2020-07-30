@@ -4,6 +4,7 @@ from RawEmbedding import RawEmbedding
 from NtuaTwitterEmbedding import NtuaTwitterEmbedding
 from StanfordTwitterEmbedding import StanfordTwitterEmbedding
 from AbsolutePositionalEmbedding import AbsolutePositionalEmbedding
+from PostagEmbedding import PostagEmbedding
 
 
 class AbstractModel(nn.Module):
@@ -24,3 +25,5 @@ class AbstractModel(nn.Module):
             return RawEmbedding(device=device)
         elif key == 'position':
             return AbsolutePositionalEmbedding(device=device)
+        elif key == 'postag':
+            return PostagEmbedding(device=device)
