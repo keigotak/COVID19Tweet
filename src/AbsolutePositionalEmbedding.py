@@ -18,7 +18,7 @@ class AbsolutePositionalEmbedding(AbstractEmbedding):
     def forward(self, sentences):
         sentences = [self.indexer.tokenize(sentence) for sentence in sentences]
         sentences = [[str(i) for i, _ in enumerate(sentence)] for sentence in sentences]
-        indexes = self.indexer.text_to_index(sentences, with_raw=True)
+        indexes = [[self.indexer.get_index(word) for word in sentence] for sentence in sentences]
         pad_indexes = self.pad_sequence(indexes)
         pad_indexes = torch.Tensor(pad_indexes).long().to(self.device)
         vectors = self.embedding(pad_indexes)
@@ -26,4 +26,5 @@ class AbsolutePositionalEmbedding(AbstractEmbedding):
 
 
 if __name__ == '__main__':
-    ne = AbsolutePositionalEmbedding(device='cpu')
+    emb = AbsolutePositionalEmbedding(device='cpu')
+    emb.forward(['I have a pen, I have a apple.'])
