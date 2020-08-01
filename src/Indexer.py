@@ -19,7 +19,7 @@ class SentenceIndexer:
 
 
 class Indexer:
-    def __init__(self, special_tokens={'<s>': 0, '<unk>': 1, '<pad>': 2, '<\s>': 3, '<mask>': 4}, with_preprocess=True, lower_count=10):
+    def __init__(self, special_tokens={'<s>': 0, '<unk>': 1, '<pad>': 2, '<\s>': 3, '<mask>': 4}, with_del_stopwords=False, lower_count=0):
         if special_tokens is None:
             self.word2index = {'<unk>': 0, '<pad>': 1}
             self.current = 2
@@ -34,7 +34,6 @@ class Indexer:
         self.padding_index = self.word2index['<pad>']
         self.unknown_index = self.word2index['<unk>']
 
-        self.with_preprocess = with_preprocess
         self.delim = ' '
         self.counts = {}
         self.lower_count = lower_count
@@ -42,12 +41,13 @@ class Indexer:
 
         self.stop_words = StopWords().get_instance()
         self.text_processor = Tokenizer().get_instance()
+        self.with_del_stopwords = with_del_stopwords
 
     def __len__(self):
         return self.current
 
     def tokenize(self, sentence):
-        if self.with_preprocess:
+        if self.with_del_stopwords:
             sentence = [word for word in self.text_processor(sentence) if word not in self.stop_words]
         else:
             sentence = [word for word in self.text_processor(sentence)]
@@ -72,11 +72,11 @@ class Indexer:
             self.count_word_in_sentence(sentence)
 
     def add_word(self, word):
-        if self.with_preprocess:
-            # if word in emoji.UNICODE_EMOJI:
-            #     print(word)
-            if word in self.counts.keys() and self.counts[word] < self.lower_count:
+        if word in self.counts.keys():
+            if self.counts[word] < self.lower_count:
                 return
+        # if word in emoji.UNICODE_EMOJI:
+        #     print(word)
         if word not in self.vocab:
             self.word2index[word] = self.current
             self.index2word[self.current] = word
@@ -106,7 +106,9 @@ class Indexer:
             return self.sentence2indexes[raw_sentence]
 
         if not with_raw:
+            print(raw_sentence)
             sentence = self.tokenize(raw_sentence)
+        print(sentence)
         indexes = [self.get_index(word) for word in sentence]
         self.sentence2indexes[raw_sentence] = indexes
         self.indexes2sentence[' '.join(map(str, indexes))] = [sentence, raw_sentence]

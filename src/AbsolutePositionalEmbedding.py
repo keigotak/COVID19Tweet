@@ -9,7 +9,7 @@ class AbsolutePositionalEmbedding(AbstractEmbedding):
     def __init__(self, device):
         super(AbsolutePositionalEmbedding, self).__init__(device=device)
         self.max_length = 150
-        self.indexer = Indexer(special_tokens={'<s>': 0, '<unk>': 1, '<pad>': 2, '<\s>': 3, '<mask>': 4}, with_preprocess=True)
+        self.indexer = Indexer(special_tokens={'<s>': 0, '<unk>': 1, '<pad>': 2, '<\s>': 3, '<mask>': 4}, with_del_stopwords=self.with_del_stopwords)
         self.indexer.add_sentence(list(map(str, range(self.max_length))), with_raw=True)
         self.embedding_dim = 20
         self.embedding = nn.Embedding(num_embeddings=len(self.indexer), embedding_dim=self.embedding_dim, padding_idx=self.indexer.padding_index)
