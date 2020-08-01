@@ -76,6 +76,11 @@ if with_shap:
     shap_values = explainer.shap_values(pd.DataFrame(X_test))
     shap.summary_plot(shap_values, xs, plot_type="bar", feature_names=feature_names)
 
+    # 各データの予測に対する各特徴量の寄与
+    i = 0
+    shap.force_plot(explainer.expected_value[0], shap_values[0][i], X_test[i], feature_names=feature_names)
+    shap.force_plot(explainer.expected_value[1], shap_values[1][i], X_test[i], feature_names=feature_names)
+
 with_importance = True
 if with_importance:
     # 分割に登場した回数を元に特徴量重要度を算出
