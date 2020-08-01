@@ -6,23 +6,9 @@ import torch
 from DataPooler import DataPooler
 from ValueWatcher import ValueWatcher
 from Metrics import get_metrics, get_print_keys
-from HelperFunctions import get_now, get_results_path, get_details_path, get_hyperparameter_keys, set_seed, get_save_model_path
+from HelperFunctions import get_now, get_results_path, get_details_path, get_hyperparameter_keys, set_seed, get_save_model_path, StartDate
 
 from ModelFactory import ModelFactory
-
-
-class StartDate:
-    __singleton = None
-    __start_date = None
-
-    def __new__(cls):
-        if cls.__singleton is None:
-            cls.__singleton = super(StartDate, cls).__new__(cls)
-            cls.__start_date = get_now(with_path=True)
-        return cls.__singleton
-
-    def get_instance(self):
-        return self.__start_date
 
 
 class Runner:
@@ -39,12 +25,10 @@ class Runner:
         self.epochs = 100
         self.best_results = {}
         self.hyper_params = factory.hyper_params
-        self.start_date = StartDate().get_instance()
+        self.start_date, self.start_date_for_path = StartDate().get_instance()
 
-    def run(self, save_model_now=None):
+    def run(self):
         best_score = 0.0
-        if save_model_now is None:
-            save_model_now = get_now(with_path=True)
         for e in range(self.epochs):
             running_loss = {key: 0.0 for key in [self.TRAIN_MODE, self.VALID_MODE]}
 
@@ -87,12 +71,12 @@ class Runner:
             self.valuewatcher.update(metrics['f1'])
             self.batchers[mode].reset(with_shuffle=False)
 
-            now = get_now()
+            now_dt, now_dt_for_path = get_now()
             text_line = '|'.join(['{} {}: {:.3f}'.format(mode, key, 100 * metrics[key])
                                   if key not in {'tp', 'fp', 'fn', 'tn'}
                                   else '{} {}: {}'.format(mode, key, metrics[key])
                                   for key in get_print_keys()])
-            print('{}|epoch: {:3d}|train loss: {:.2f}|valid loss: {:.2f}|{}'.format(now,
+            print('{}|epoch: {:3d}|train loss: {:.2f}|valid loss: {:.2f}|{}'.format(now_dt,
                                                                                     e + 1,
                                                                                     running_loss[self.TRAIN_MODE],
                                                                                     running_loss[self.VALID_MODE],
@@ -100,13 +84,13 @@ class Runner:
 
             if self.valuewatcher.is_updated() or e == 0:
                 self.best_results = metrics
-                self.best_results['date'] = now
+                self.best_results['date'] = now_dt
                 self.best_results['epoch'] = e + 1
                 self.best_results['train_loss'] = running_loss[self.TRAIN_MODE]
                 self.best_results['valid_loss'] = running_loss[self.VALID_MODE]
                 best_score = self.best_results['f1']
                 torch.save(self.model.state_dict(),
-                           get_save_model_path(dir_tag=save_model_now, file_tag='-{:03}-{:.3f}'.format(e + 1, best_score)))
+                           get_save_model_path(dir_tag=self.start_date_for_path, file_tag='{:.6f}-{:03}-{}'.format(best_score, e + 1, now_dt_for_path)))
             if self.valuewatcher.is_over():
                 break
 
@@ -134,7 +118,7 @@ class Runner:
         logits = self.poolers[self.VALID_MODE].get(e + '-logits')
         preds = self.poolers[self.VALID_MODE].get(e + '-preds')
         predicted_labels = self.poolers[self.VALID_MODE].get(e + '-predicted_label')
-        with get_details_path(tag=self.start_date + '-' + e).open('w', encoding='utf-8-sig') as f:
+        with get_details_path(tag=self.start_date_for_path + '-' + e).open('w', encoding='utf-8-sig') as f:
             for x, y, logit, pred, plabel in zip(xs, ys, logits, preds, predicted_labels):
                 f.write('\t'.join(list(map(str, [x, y, logit, pred, plabel]))))
                 f.write('\n')
@@ -143,7 +127,7 @@ class Runner:
             try:
                 with get_details_path(tag='details').open('a', encoding='utf-8-sig') as f:
                     hyper_params = '|'.join(['{}:{}'.format(key, self.hyper_params[key]) for key in get_hyperparameter_keys()])
-                    f.write(','.join([os.path.basename(__file__), self.start_date] + [str(self.best_results[key]) for key in ['epoch', 'train_loss', 'valid_loss'] + get_print_keys()] + [hyper_params]))
+                    f.write(','.join([os.path.basename(__file__), self.start_date] + [str(self.best_results[key]) for key in ['date', 'epoch', 'train_loss', 'valid_loss'] + get_print_keys()] + [hyper_params]))
                     f.write('\n')
                     break
             except IOError:

@@ -3,7 +3,7 @@ from optuna.samplers import TPESampler
 
 
 from Runner import Runner
-from HelperFunctions import get_milliseconds, get_now
+from HelperFunctions import get_milliseconds, get_now, StartDate
 
 
 class HyperparameterSearcher:
@@ -14,6 +14,7 @@ class HyperparameterSearcher:
         self.device = device
         # study = optuna.create_study(study_name=study_name, sampler=sampler, direction=direction, storage='sqlite:///./results/hyp-search.db', load_if_exists=True)
         self.study = optuna.create_study(study_name=self.study_name, sampler=self.sampler, direction=self.direction)
+        self.start_date, self.start_date_for_path = StartDate().get_instance()
 
     def get_hyperparameters(self, trial):
         hyper_params = {}
@@ -37,7 +38,7 @@ class HyperparameterSearcher:
     def objective(self, trial):
         hyper_params = self.get_hyperparameters(trial=trial)
         runner = Runner(device=self.device, hyper_params=hyper_params)
-        score = runner.run(save_model_now=get_now(with_path=True))
+        score = runner.run()
         return score
 
     def run(self):

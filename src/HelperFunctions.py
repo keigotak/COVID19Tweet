@@ -14,11 +14,9 @@ def set_seed(seed=97):
     torch.cuda.manual_seed(seed)
 
 
-def get_now(with_path=False):
+def get_now():
     dt_now = datetime.now()
-    if with_path:
-        return dt_now.strftime('%Y%m%d%H%M%S')
-    return dt_now.strftime('%Y.%m.%d %H:%M:%S')
+    return dt_now.strftime('%Y.%m.%d %H:%M:%S'), dt_now.strftime('%Y%m%d%H%M%S')
 
 
 def get_milliseconds():
@@ -105,7 +103,7 @@ def get_save_model_path(dir_tag, file_tag=''):
     now = dt_now.strftime('%Y%m%d_%H%M%S')
     directory = Path('../data/results/{}'.format(dir_tag))
     directory.mkdir(parents=True, exist_ok=True)
-    return directory / '{}{}.pkl'.format(now, file_tag)
+    return directory / '{}{}.pkl'.format(file_tag, now)
 
 
 def get_hyperparameter_keys():
@@ -118,6 +116,20 @@ def get_hyperparameter_keys():
             'optimizer',
             'momentum',
             'model']
+
+
+class StartDate:
+    __singleton = None
+    __start_date = None
+
+    def __new__(cls):
+        if cls.__singleton is None:
+            cls.__singleton = super(StartDate, cls).__new__(cls)
+            cls.__start_date, cls.__start_date_for_path = get_now()
+        return cls.__singleton
+
+    def get_instance(self):
+        return self.__start_date, self.__start_date_for_path
 
 
 if __name__ == "__main__":
