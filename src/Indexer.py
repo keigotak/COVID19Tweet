@@ -106,9 +106,7 @@ class Indexer:
             return self.sentence2indexes[raw_sentence]
 
         if not with_raw:
-            print(raw_sentence)
             sentence = self.tokenize(raw_sentence)
-        print(sentence)
         indexes = [self.get_index(word) for word in sentence]
         self.sentence2indexes[raw_sentence] = indexes
         self.indexes2sentence[' '.join(map(str, indexes))] = [sentence, raw_sentence]
