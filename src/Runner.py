@@ -107,6 +107,8 @@ class Runner:
                 best_score = self.best_results['f1']
                 torch.save(self.model.state_dict(),
                            get_save_model_path(dir_tag=save_model_now, file_tag='-{:03}-{:.3f}'.format(e + 1, best_score)))
+            if self.valuewatcher.is_over():
+                break
 
         self.export_results()
         self.export_details()
