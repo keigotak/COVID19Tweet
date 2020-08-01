@@ -11,6 +11,20 @@ from HelperFunctions import get_now, get_results_path, get_details_path, get_hyp
 from ModelFactory import ModelFactory
 
 
+class StartDate:
+    __singleton = None
+    __start_date = None
+
+    def __new__(cls):
+        if cls.__singleton is None:
+            cls.__singleton = super(StartDate, cls).__new__(cls)
+            cls.__start_date = get_now(with_path=True)
+        return cls.__singleton
+
+    def get_instance(self):
+        return self.__start_date
+
+
 class Runner:
     def __init__(self, device='cuda:0', hyper_params={}):
         set_seed()
@@ -25,6 +39,7 @@ class Runner:
         self.epochs = 100
         self.best_results = {}
         self.hyper_params = factory.hyper_params
+        self.start_date = StartDate().get_instance()
 
     def run(self, save_model_now=None):
         best_score = 0.0
@@ -105,6 +120,28 @@ class Runner:
                 with path.open('a', encoding='utf-8-sig') as f:
                     hyper_params = '|'.join(['{}:{}'.format(key, self.hyper_params[key]) for key in get_hyperparameter_keys()])
                     f.write(','.join([os.path.basename(__file__)] + [str(self.best_results[key]) for key in ['date', 'epoch', 'train_loss', 'valid_loss'] + get_print_keys()] + [hyper_params]))
+                    f.write('\n')
+                    break
+            except IOError:
+                time.sleep(0.5)
+
+    def export_details(self):
+        e = 'epoch{}'.format(self.best_results['epoch'])
+        xs = self.poolers[self.VALID_MODE].get(e + '-x')
+        ys = self.poolers[self.VALID_MODE].get(e + '-y')
+        logits = self.poolers[self.VALID_MODE].get(e + '-logits')
+        preds = self.poolers[self.VALID_MODE].get(e + '-preds')
+        predicted_labels = self.poolers[self.VALID_MODE].get(e + '-predicted_label')
+        with get_details_path(tag=self.start_date + '-' + e).open('w', encoding='utf-8-sig') as f:
+            for x, y, logit, pred, plabel in zip(xs, ys, logits, preds, predicted_labels):
+                f.write('\t'.join(list(map(str, [x, y, logit, pred, plabel]))))
+                f.write('\n')
+
+        while True:
+            try:
+                with get_details_path(tag='details').open('a', encoding='utf-8-sig') as f:
+                    hyper_params = '|'.join(['{}:{}'.format(key, self.hyper_params[key]) for key in get_hyperparameter_keys()])
+                    f.write(','.join([os.path.basename(__file__), self.start_date] + [str(self.best_results[key]) for key in ['epoch', 'train_loss', 'valid_loss'] + get_print_keys()] + [hyper_params]))
                     f.write('\n')
                     break
             except IOError:
