@@ -50,8 +50,12 @@ class Indexer:
         if self.with_preprocess:
             sentence = [word for word in self.text_processor(sentence) if word not in self.stop_words]
         else:
-            sentence = sentence.strip().split(' ')
+            sentence = [word for word in self.text_processor(sentence)]
         return sentence
+
+    def is_stopword(self, sentences):
+        is_stopword = [[0 if word not in self.stop_words else 1 for word in sentence] for sentence in sentences]
+        return is_stopword
 
     def count_word(self, word):
         if word not in self.counts.keys():

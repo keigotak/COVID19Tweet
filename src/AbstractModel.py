@@ -27,3 +27,19 @@ class AbstractModel(nn.Module):
             return AbsolutePositionalEmbedding(device=device)
         elif key == 'postag':
             return PostagEmbedding(device=device)
+
+
+if __name__ == '__main__':
+    am = AbstractModel()
+    embs = []
+    for key in ['raw', 'position', 'postag']:
+        embs.append(am.get_embeddings(key, device='cpu'))
+    sentences = [['I have a pen. I have an apple.']]
+
+    results = []
+    for sentence in sentences:
+        for emb in embs:
+            results.append(emb(sentence))
+    import torch
+    torch.cat(results, dim=2)
+
