@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 
 from AbstractModel import AbstractModel
-from Attention import Attention
 
 
 class SelfattentionEncoder(AbstractModel):
@@ -50,5 +49,6 @@ class SelfattentionEncoder(AbstractModel):
 
 
 '''
+2020.07.28 20:02:15|epoch:  16|train loss: 428.58|valid loss: 127.35|valid f1: 79.709|valid precision: 78.323|valid recall: 81.144|valid accuracy: 80.500|valid tp: 383|valid fp: 106|valid fn: 89|valid tn: 422
 '''
 
