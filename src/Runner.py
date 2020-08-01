@@ -6,7 +6,7 @@ import torch
 from DataPooler import DataPooler
 from ValueWatcher import ValueWatcher
 from Metrics import get_metrics, get_print_keys
-from HelperFunctions import get_now, get_results_path, get_hyperparameter_keys, set_seed, get_save_model_path
+from HelperFunctions import get_now, get_results_path, get_details_path, get_hyperparameter_keys, set_seed, get_save_model_path
 
 from ModelFactory import ModelFactory
 
@@ -83,8 +83,6 @@ class Runner:
                                                                                     running_loss[self.VALID_MODE],
                                                                                     text_line))
 
-            if self.valuewatcher.is_over():
-                break
             if self.valuewatcher.is_updated() or e == 0:
                 self.best_results = metrics
                 self.best_results['date'] = now
@@ -96,6 +94,7 @@ class Runner:
                            get_save_model_path(dir_tag=save_model_now, file_tag='-{:03}-{:.3f}'.format(e + 1, best_score)))
 
         self.export_results()
+        self.export_details()
 
         return best_score
 
