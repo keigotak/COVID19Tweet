@@ -96,6 +96,10 @@ def get_results_path(tag=''):
     return Path('../data/results/results-{}.csv'.format(tag))
 
 
+def get_details_path(tag=''):
+    return Path('../data/results/details/details-{}.csv'.format(tag))
+
+
 def get_save_model_path(dir_tag, file_tag=''):
     dt_now = datetime.now()
     now = dt_now.strftime('%Y%m%d_%H%M%S')
