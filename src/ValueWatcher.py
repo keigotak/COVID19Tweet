@@ -46,6 +46,8 @@ class ValueWatcher:
             self.is_min = False
 
     def is_over(self):
+        if self.threshold < 0:
+            return True
         if self.mode == 'maximize':
             return self.is_max
         elif self.mode == 'minimize':
