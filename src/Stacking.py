@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import lightgbm
-from sklearn.model_selection import train_test_split
 from sklearn.inspection import permutation_importance
 from sklearn.metrics import make_scorer, f1_score
 import matplotlib.pyplot as plt
@@ -13,7 +12,7 @@ from Metrics import get_metrics
 random_state = 97
 
 
-def get_path():
+def get_path(mode='train'):
     base_path = Path('../data/results/details')
     files = [
         'details-20200731220126-epoch1.csv',
@@ -23,8 +22,8 @@ def get_path():
     return base_path, files
 
 
-def get_data():
-    base_path, files = get_path()
+def get_data(mode='train'):
+    base_path, files = get_path(mode=mode)
 
     sentences = []
     labels = {file: {} for file in files}
@@ -57,10 +56,10 @@ def get_data():
 
 
 
-xs, ys = get_data()
-feature_names = ['model1', 'model2', 'model3']
+X_train, y_train = get_data(mode='train')
+X_test, y_test = get_data(mode='valid')
 
-X_train, X_test, y_train, y_test = train_test_split(xs, ys, test_size=0.33, random_state=random_state)
+feature_names = ['model1', 'model2', 'model3']
 lgbm = lightgbm.LGBMClassifier(random_state=random_state)
 lgbm.fit(y=y_train, X=X_train, feature_name=feature_names)
 
@@ -73,13 +72,13 @@ with_shap = True
 if with_shap:
     shap.initjs()
     explainer = shap.TreeExplainer(lgbm)
-    shap_values = explainer.shap_values(pd.DataFrame(X_test))
-    shap.summary_plot(shap_values, xs, plot_type="bar", feature_names=feature_names)
+    shap_values = explainer.shap_values(pd.DataFrame(X_train+X_test))
+    shap.summary_plot(shap_values, X_train+X_test, plot_type="bar", feature_names=feature_names)
 
     # 各データの予測に対する各特徴量の寄与
     i = 0
-    shap.force_plot(explainer.expected_value[0], shap_values[0][i], X_test[i], feature_names=feature_names)
-    shap.force_plot(explainer.expected_value[1], shap_values[1][i], X_test[i], feature_names=feature_names)
+    shap.force_plot(explainer.expected_value[0], shap_values[0][i], (X_train + X_test)[i], feature_names=feature_names)
+    shap.force_plot(explainer.expected_value[1], shap_values[1][i], (X_train + X_test)[i], feature_names=feature_names)
 
 with_importance = True
 if with_importance:
