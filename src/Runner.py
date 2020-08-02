@@ -20,7 +20,7 @@ class Runner:
         self.model, self.batchers, self.optimizer, self.criterion = [factory_items[key] for key in ['model', 'batchers', 'optimizer', 'criterion']]
         self.TRAIN_MODE, self.VALID_MODE = 'train', 'valid'
         self.batchers = {self.TRAIN_MODE: self.batchers[self.TRAIN_MODE], self.VALID_MODE: self.batchers[self.VALID_MODE]}
-        self.poolers = {self.VALID_MODE: DataPooler()}
+        self.poolers = {self.TRAIN_MODE: DataPooler(), self.VALID_MODE: DataPooler()}
         self.valuewatcher = ValueWatcher()
         self.epochs = 100
         self.best_results = {}
@@ -43,6 +43,20 @@ class Runner:
                 loss.backward()
                 running_loss[mode] += loss.item()
                 self.optimizer.step()
+
+                preds = torch.sigmoid(outputs)
+                predicted_label = [0 if item < 0.5 else 1 for item in preds.squeeze().tolist()]
+                self.poolers[mode].set('epoch{}-x'.format(e + 1), x_batch)
+                self.poolers[mode].set('epoch{}-y'.format(e + 1), y_batch)
+                self.poolers[mode].set('epoch{}-logits'.format(e + 1), outputs.squeeze().tolist())
+                self.poolers[mode].set('epoch{}-preds'.format(e + 1), preds.squeeze().tolist())
+                self.poolers[mode].set('epoch{}-predicted_label'.format(e + 1), predicted_label)
+
+            metrics = get_metrics(self.poolers[mode].get('epoch{}-predicted_label'.format(e + 1)),
+                                  self.poolers[mode].get('epoch{}-y'.format(e + 1)))
+            self.poolers[mode].set('epoch{}-metrics'.format(e + 1), metrics)
+            self.poolers[mode].set('epoch{}-train_loss'.format(e + 1), running_loss[self.TRAIN_MODE])
+            self.poolers[mode].set('epoch{}-valid_loss'.format(e + 1), running_loss[self.VALID_MODE])
             self.batchers[mode].reset(with_shuffle=True)
 
             mode = self.VALID_MODE
@@ -112,20 +126,21 @@ class Runner:
                 time.sleep(0.5)
 
     def export_details(self):
-        e = 'epoch{}'.format(self.best_results['epoch'])
-        xs = self.poolers[self.VALID_MODE].get(e + '-x')
-        ys = self.poolers[self.VALID_MODE].get(e + '-y')
-        logits = self.poolers[self.VALID_MODE].get(e + '-logits')
-        preds = self.poolers[self.VALID_MODE].get(e + '-preds')
-        predicted_labels = self.poolers[self.VALID_MODE].get(e + '-predicted_label')
-        with get_details_path(tag=self.start_date_for_path + '-' + e).open('w', encoding='utf-8-sig') as f:
-            for x, y, logit, pred, plabel in zip(xs, ys, logits, preds, predicted_labels):
-                f.write('\t'.join(list(map(str, [x, y, logit, pred, plabel]))))
-                f.write('\n')
+        for mode in [self.TRAIN_MODE, self.VALID_MODE]:
+            e = 'epoch{}'.format(self.best_results['epoch'])
+            xs = self.poolers[mode].get(e + '-x')
+            ys = self.poolers[mode].get(e + '-y')
+            logits = self.poolers[mode].get(e + '-logits')
+            preds = self.poolers[mode].get(e + '-preds')
+            predicted_labels = self.poolers[mode].get(e + '-predicted_label')
+            with get_details_path(tag=self.start_date_for_path + '-{}-{}'.format(e, mode)).open('w', encoding='utf-8-sig') as f:
+                for x, y, logit, pred, plabel in zip(xs, ys, logits, preds, predicted_labels):
+                    f.write('\t'.join(list(map(str, [x, y, logit, pred, plabel]))))
+                    f.write('\n')
 
         while True:
             try:
-                with get_details_path(tag='details').open('a', encoding='utf-8-sig') as f:
+                with get_details_path(tag='summary').open('a', encoding='utf-8-sig') as f:
                     hyper_params = '|'.join(['{}:{}'.format(key, self.hyper_params[key]) for key in get_hyperparameter_keys()])
                     f.write(','.join([os.path.basename(__file__), self.start_date] + [str(self.best_results[key]) for key in ['date', 'epoch', 'train_loss', 'valid_loss'] + get_print_keys()] + [hyper_params]))
                     f.write('\n')
