@@ -100,10 +100,10 @@ def get_details_path(tag=''):
 
 def get_save_model_path(dir_tag, file_tag=''):
     dt_now = datetime.now()
-    now = dt_now.strftime('%Y%m%d_%H%M%S')
+    now = dt_now.strftime('%Y%m%d%H%M%S')
     directory = Path('../data/results/{}'.format(dir_tag))
     directory.mkdir(parents=True, exist_ok=True)
-    return directory / '{}{}.pkl'.format(file_tag, now)
+    return directory / '{}-{}.pkl'.format(file_tag, now)
 
 
 def get_hyperparameter_keys():
