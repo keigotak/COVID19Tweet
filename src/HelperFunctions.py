@@ -130,7 +130,7 @@ class StartDate:
 
     def get_instance(self):
         return self.__start_date, self.__start_date_for_path
-StartDate()
+
 
 if __name__ == "__main__":
     generate_vocabjson()

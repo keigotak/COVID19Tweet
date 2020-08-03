@@ -46,7 +46,6 @@ class Tokenizer:
 
     def get_instance(self):
         return self.__tokenizer
-Tokenizer()
 
 
 if __name__ == '__main__':

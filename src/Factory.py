@@ -23,4 +23,4 @@ class Factory:
 
     def get_instance(self):
         return self.__initial_train_batcher, self.__initial_valid_batcher, self.__criterion
-Factory()
+

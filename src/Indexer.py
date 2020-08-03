@@ -16,7 +16,6 @@ class SentenceIndexer:
 
     def get_instance(self):
         return self.__sentence2indexes, self.__indexes2sentence
-SentenceIndexer()
 
 
 class Indexer:
