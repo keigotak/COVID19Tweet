@@ -112,12 +112,17 @@ class Runner:
 
         return best_score
 
+    def to_string_hyper_params(self):
+        hyper_params = '|'.join(
+            ['{}:{}'.format(key, self.hyper_params[key]) if type(self.hyper_params[key]) != list else '{}:{}'.format(key, '/'.join(self.hyper_params[key])) for key in sorted(self.hyper_params.keys(), reverse=True)])
+        return hyper_params
+
     def export_results(self):
         path = get_results_path('hyp')
         while True:
             try:
                 with path.open('a', encoding='utf-8-sig') as f:
-                    hyper_params = '|'.join(['{}:{}'.format(key, self.hyper_params[key]) for key in get_hyperparameter_keys()])
+                    hyper_params = self.to_string_hyper_params()
                     f.write(','.join([os.path.basename(__file__)] + [str(self.best_results[key]) for key in ['date', 'epoch', 'train_loss', 'valid_loss'] + get_print_keys()] + [hyper_params]))
                     f.write('\n')
                     break
@@ -140,7 +145,7 @@ class Runner:
         while True:
             try:
                 with get_details_path(tag='summary').open('a', encoding='utf-8-sig') as f:
-                    hyper_params = '|'.join(['{}:{}'.format(key, self.hyper_params[key]) for key in get_hyperparameter_keys()])
+                    hyper_params = self.to_string_hyper_params()
                     f.write(','.join([os.path.basename(__file__), self.start_date] + [str(self.best_results[key]) for key in ['date', 'epoch', 'train_loss', 'valid_loss'] + get_print_keys()] + [hyper_params]))
                     f.write('\n')
                     break
