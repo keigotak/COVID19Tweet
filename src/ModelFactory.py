@@ -7,6 +7,7 @@ from BiGruSelfattention import BiGruSelfattention
 from BiGruSelfattentionWithCheating import BiGruSelfattentionWithCheating
 from Cnn import Cnn
 from SelfattentionEncoder import SelfattentionEncoder
+from HelperFunctions import set_seed
 
 
 class ModelFactory:
@@ -15,6 +16,7 @@ class ModelFactory:
 
         self.hyper_params = self.init_hyperparameters()
         self.hyper_params = {key: hyper_params[key] if key in hyper_params.keys() else val for key, val in self.hyper_params.items()}
+        set_seed(self.hyper_params['seed'])
 
         self.train_batcher = copy.deepcopy(self.initial_train_batcher.set_batch_size(self.hyper_params['train_batch_size']))
         self.valid_batcher = copy.deepcopy(self.initial_valid_batcher)
@@ -52,7 +54,8 @@ class ModelFactory:
                         'clip_grad_nurm': 0.0,
                         'optimizer': 'sgd',
                         'embeddings': ['ntua'],
-                        'model': 'gru'
+                        'model': 'gru',
+                        'seed': 0
                         }
         if hyper_params['optimizer'] == 'sgd':
             hyper_params['momentum'] = 0.0

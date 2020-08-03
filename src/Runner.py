@@ -6,14 +6,13 @@ import torch
 from DataPooler import DataPooler
 from ValueWatcher import ValueWatcher
 from Metrics import get_metrics, get_print_keys
-from HelperFunctions import get_now, get_results_path, get_details_path, get_hyperparameter_keys, set_seed, get_save_model_path, StartDate
+from HelperFunctions import get_now, get_results_path, get_details_path, get_save_model_path, StartDate
 
 from ModelFactory import ModelFactory
 
 
 class Runner:
     def __init__(self, device='cuda:0', hyper_params={}):
-        set_seed()
         self.device = device
         factory = ModelFactory(device=self.device, hyper_params=hyper_params)
         factory_items = factory.generate()

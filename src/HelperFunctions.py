@@ -106,18 +106,6 @@ def get_save_model_path(dir_tag, file_tag=''):
     return directory / '{}-{}.pkl'.format(file_tag, now)
 
 
-def get_hyperparameter_keys():
-    return ['lr',
-            'num_head',
-            'dropout_ratio',
-            'train_batch_size',
-            'weight_decay',
-            'clip_grad_nurm',
-            'optimizer',
-            'momentum',
-            'model']
-
-
 class StartDate:
     __singleton = None
     __start_date = None
