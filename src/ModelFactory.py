@@ -52,7 +52,6 @@ class ModelFactory:
     @staticmethod
     def init_hyperparameters():
         hyper_params = {'lr': 0.01,
-                        'num_head': 8,
                         'dropout_ratio': 0.2,
                         'train_batch_size': 4,
                         'weight_decay': 0.0,
