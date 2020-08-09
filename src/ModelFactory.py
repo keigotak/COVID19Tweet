@@ -53,6 +53,7 @@ class ModelFactory:
                         'dropout_ratio': 0.2,
                         'train_batch_size': 4,
                         'weight_decay': 0.0,
+                        'gradient_clip': 0.0,
                         'clip_grad_nurm': 0.0,
                         'optimizer_type': 'sgd',
                         'embeddings': ['ntua'],
