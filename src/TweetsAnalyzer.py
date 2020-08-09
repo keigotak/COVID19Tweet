@@ -58,15 +58,36 @@ def get_tweets():
             tweet = get_tweet_status(api, text[0])
             tweets[mode][text[0]] = [tweet, text[1], text[2]]
 
-    with Path('../data/analytic/tweets.pkl').open('wb') as f:
+    with Path('../data/analytic/tweets_200801.pkl').open('wb') as f:
         pickle.dump(tweets, f)
 
 
 def open_pickle():
-    with Path('../data/analytic/tweets.pkl').open('rb') as f:
+    with Path('../data/analytic/tweets_200801.pkl').open('rb') as f:
         tweets = pickle.load(f)
     return tweets
 
+
+def annotate_tweets():
+    tweets = open_pickle()
+    rets = []
+    for mode in ['train', 'valid']:
+        path = get_path(mode)
+        texts = get_texts(path)
+        for line in texts:
+            index = line[0]
+            if tweets[mode][index][0] is None:
+                print(tweets[mode][index])
+                continue
+            tweet = tweets[mode][index][0]._json
+            label = tweets[mode][index][2]
+            tweet['mode'] = mode
+            tweet['label'] = label
+            tweet['text_from_dataset'] = line[1]
+            rets.append(tweet)
+
+    with Path('../data/analytic/tweets.json').open('w', encoding='utf-8-sig') as f:
+        json.dump(rets, f)
 
 
 if __name__ == '__main__':
@@ -74,5 +95,7 @@ if __name__ == '__main__':
     if reset_dumps:
         get_tweets()
     else:
-        tweets = open_pickle()
-        print(tweets)
+        # tweets = open_pickle()
+        # print(tweets)
+
+        annotate_tweets()

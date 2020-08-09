@@ -12,11 +12,11 @@ from HelperFunctions import set_seed
 
 class ModelFactory:
     def __init__(self, device='cpu', hyper_params={}):
-        self.initial_train_batcher, self.initial_valid_batcher, self.criterion = Factory().get_instance()
-
         self.hyper_params = self.init_hyperparameters()
         self.hyper_params = {key: hyper_params[key] if key in hyper_params.keys() else val for key, val in self.hyper_params.items()}
         set_seed(self.hyper_params['seed'])
+
+        self.initial_train_batcher, self.initial_valid_batcher, self.criterion = Factory(self.hyper_params['label']).get_instance()
 
         self.train_batcher = copy.deepcopy(self.initial_train_batcher.set_batch_size(self.hyper_params['train_batch_size']))
         self.valid_batcher = copy.deepcopy(self.initial_valid_batcher)
