@@ -16,9 +16,11 @@ class Runner:
         self.device = device
         factory = ModelFactory(device=self.device, hyper_params=hyper_params)
         factory_items = factory.generate()
-        self.model, self.batchers, self.optimizer, self.criterion = [factory_items[key] for key in ['model', 'batchers', 'optimizer', 'criterion']]
+        self.model, self.batchers, self.optimizer, self.criterion = [factory_items[key] for key in
+                                                                     ['model', 'batchers', 'optimizer', 'criterion']]
         self.TRAIN_MODE, self.VALID_MODE = 'train', 'valid'
-        self.batchers = {self.TRAIN_MODE: self.batchers[self.TRAIN_MODE], self.VALID_MODE: self.batchers[self.VALID_MODE]}
+        self.batchers = {self.TRAIN_MODE: self.batchers[self.TRAIN_MODE],
+                         self.VALID_MODE: self.batchers[self.VALID_MODE]}
         self.poolers = {self.TRAIN_MODE: DataPooler(), self.VALID_MODE: DataPooler()}
         self.valuewatcher = ValueWatcher()
         self.epochs = 100
@@ -44,13 +46,7 @@ class Runner:
                 running_loss[mode] += loss.item()
                 self.optimizer.step()
 
-                preds = torch.sigmoid(outputs)
-                predicted_label = [0 if item < 0.5 else 1 for item in preds.squeeze().tolist()]
-                self.poolers[mode].set('epoch{}-x'.format(e + 1), x_batch)
-                self.poolers[mode].set('epoch{}-y'.format(e + 1), y_batch)
-                self.poolers[mode].set('epoch{}-logits'.format(e + 1), outputs.squeeze().tolist())
-                self.poolers[mode].set('epoch{}-preds'.format(e + 1), preds.squeeze().tolist())
-                self.poolers[mode].set('epoch{}-predicted_label'.format(e + 1), predicted_label)
+                self.predict_and_pool(mode=mode, outputs=outputs, x_batch=x_batch, y_batch=y_batch, e=e)
 
             metrics = get_metrics(self.poolers[mode].get('epoch{}-predicted_label'.format(e + 1)),
                                   self.poolers[mode].get('epoch{}-y'.format(e + 1)))
@@ -69,13 +65,7 @@ class Runner:
                     loss = self.criterion(outputs, labels)
                     running_loss[mode] += loss.item()
 
-                    preds = torch.sigmoid(outputs)
-                    predicted_label = [0 if item < 0.5 else 1 for item in preds.squeeze().tolist()]
-                    self.poolers[mode].set('epoch{}-x'.format(e + 1), x_batch)
-                    self.poolers[mode].set('epoch{}-y'.format(e + 1), y_batch)
-                    self.poolers[mode].set('epoch{}-logits'.format(e + 1), outputs.squeeze().tolist())
-                    self.poolers[mode].set('epoch{}-preds'.format(e + 1), preds.squeeze().tolist())
-                    self.poolers[mode].set('epoch{}-predicted_label'.format(e + 1), predicted_label)
+                    self.predict_and_pool(mode=mode, outputs=outputs, x_batch=x_batch, y_batch=y_batch, e=e)
 
             metrics = get_metrics(self.poolers[mode].get('epoch{}-predicted_label'.format(e + 1)),
                                   self.poolers[mode].get('epoch{}-y'.format(e + 1)))
@@ -113,9 +103,34 @@ class Runner:
 
         return best_score
 
+    def predict_and_pool(self, mode, outputs, x_batch, y_batch, e):
+        preds, predicted_label = self.predict(outputs)
+
+        self.poolers[mode].set('epoch{}-x'.format(e + 1), x_batch)
+        self.poolers[mode].set('epoch{}-y'.format(e + 1), y_batch)
+        self.poolers[mode].set('epoch{}-logits'.format(e + 1), outputs.squeeze().tolist())
+        self.poolers[mode].set('epoch{}-preds'.format(e + 1), preds.squeeze().tolist())
+        self.poolers[mode].set('epoch{}-predicted_label'.format(e + 1), predicted_label)
+
+    def predict(self, outputs):
+        if self.is_binary_task():
+            preds = torch.sigmoid(outputs)
+            predicted_label = [0 if item < 0.5 else 1 for item in preds.squeeze().tolist()]
+        else:
+            preds = torch.softmax(outputs, dim=1)
+            predicted_label = torch.argmax(preds, dim=1).squeeze().tolist()
+        return preds, predicted_label
+
+    def is_binary_task(self):
+        if self.hyper_params['num_class'] == 1:
+            return True
+        else:
+            return False
+
     def to_string_hyper_params(self):
         hyper_params = '|'.join(
-            ['{}:{}'.format(key, self.hyper_params[key]) if type(self.hyper_params[key]) != list else '{}:{}'.format(key, '/'.join(self.hyper_params[key])) for key in sorted(self.hyper_params.keys(), reverse=True)])
+            ['{}:{}'.format(key, self.hyper_params[key]) if type(self.hyper_params[key]) != list else '{}:{}'.format(
+                key, '/'.join(self.hyper_params[key])) for key in sorted(self.hyper_params.keys(), reverse=True)])
         return hyper_params
 
     def export_results(self):
@@ -124,7 +139,10 @@ class Runner:
             try:
                 with path.open('a', encoding='utf-8-sig') as f:
                     hyper_params = self.to_string_hyper_params()
-                    f.write(','.join([os.path.basename(__file__)] + [str(self.best_results[key]) for key in ['date', 'epoch', 'train_loss', 'valid_loss'] + get_print_keys()] + [hyper_params]))
+                    f.write(','.join([os.path.basename(__file__)]
+                                     + [str(self.best_results[key]) for key in ['date', 'epoch', 'train_loss',
+                                                                                'valid_loss'] + get_print_keys()]
+                                     + [hyper_params]))
                     f.write('\n')
                     break
             except IOError:
@@ -148,7 +166,12 @@ class Runner:
             try:
                 with get_details_path(tag='summary').open('a', encoding='utf-8-sig') as f:
                     hyper_params = self.to_string_hyper_params()
-                    f.write(','.join([os.path.basename(__file__), self.start_date] + [str(self.best_results[key]) for key in ['date', 'epoch', 'train_loss', 'valid_loss'] + get_print_keys()] + [hyper_params]))
+                    f.write(
+                        ','.join(
+                            [os.path.basename(__file__), self.start_date]
+                            + [str(self.best_results[key]) for key in ['date', 'epoch', 'train_loss',
+                                                                       'valid_loss'] + get_print_keys()]
+                            + [hyper_params]))
                     f.write('\n')
                     break
             except IOError:
