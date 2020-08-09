@@ -1,8 +1,20 @@
+from sklearn.metrics import confusion_matrix
 
 
-def get_metrics(outputs, labels):
+def get_metrics(outputs, labels, is_binary_task=True):
 
-    tp, fp, fn, tn = get_confusion_matrix(outputs, labels)
+    if is_binary_task:
+        tp, fp, fn, tn = get_confusion_matrix(outputs, labels)
+    else:
+        tp, fp, fn, tn = 0, 0, 0, 0
+        rets = confusion_matrix(y_true=labels, y_pred=outputs)
+        for i, ret in enumerate(rets):
+            for j, item in enumerate(ret):
+                if i == j:
+                    tp += item
+                else:
+                    fn += item
+                    fp += item
 
     accuracy = 0.0 if (tp + fp + fn + tn) == 0 else (tp + tn) / (tp + fp + fn + tn)
     precision = 0.0 if (tp + fp) == 0 else tp / (tp + fp)
