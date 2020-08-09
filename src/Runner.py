@@ -176,7 +176,7 @@ class Runner:
 
         while True:
             try:
-                with get_details_path(tag='summary').open('a', encoding='utf-8-sig') as f:
+                with get_details_path(tag='{}'.format(self.study_name)).open('a', encoding='utf-8-sig') as f:
                     hyper_params = self.to_string_hyper_params()
                     f.write(
                         ','.join(
