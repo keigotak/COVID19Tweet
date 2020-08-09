@@ -13,7 +13,9 @@ from HelperFunctions import set_seed
 class ModelFactory:
     def __init__(self, device='cpu', hyper_params={}):
         self.hyper_params = self.init_hyperparameters()
-        self.hyper_params = {key: hyper_params[key] if key in hyper_params.keys() else val for key, val in self.hyper_params.items()}
+        for key in set(self.hyper_params) | set(hyper_params):
+            if key in hyper_params:
+                self.hyper_params[key] = hyper_params[key]
         set_seed(self.hyper_params['seed'])
 
         self.initial_train_batcher, self.initial_valid_batcher, self.criterion = Factory(self.hyper_params['label']).get_instance()
