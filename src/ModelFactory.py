@@ -39,10 +39,10 @@ class ModelFactory:
                 parameter.requires_grad = True
                 print(parameter)
 
-        if self.hyper_params['optimizer'] == 'sgd':
-            self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.hyper_params['lr'], momentum=self.hyper_params['momentum'])
-        elif hyper_params['optimizer'] == 'adam':
-            self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.hyper_params['lr'])
+        if self.hyper_params['optimizer_type'] == 'sgd':
+            self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.hyper_params['lr'], weight_decay=self.hyper_params['weight_decay'], momentum=self.hyper_params['momentum'])
+        elif hyper_params['optimizer_type'] == 'adam':
+            self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.hyper_params['lr'], weight_decay=self.hyper_params['weight_decay'])
 
     @staticmethod
     def init_hyperparameters():
@@ -52,13 +52,13 @@ class ModelFactory:
                         'train_batch_size': 4,
                         'weight_decay': 0.0,
                         'clip_grad_nurm': 0.0,
-                        'optimizer': 'sgd',
+                        'optimizer_type': 'sgd',
                         'embeddings': ['ntua'],
                         'model': 'gru',
                         'seed': 0,
                         'label': 'informative_or_not'
                         }
-        if hyper_params['optimizer'] == 'sgd':
+        if hyper_params['optimizer_type'] == 'sgd':
             hyper_params['momentum'] = 0.0
 
         if hyper_params['model'] == 'cnn':
