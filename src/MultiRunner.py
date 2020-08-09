@@ -70,6 +70,7 @@ class MultiRunner:
                         pass
         else:
             for hyper_params in self.hyper_parameter_set:
+                print(hyper_params)
                 self.single_run(hyper_params=hyper_params)
 
     def get_device(self):
