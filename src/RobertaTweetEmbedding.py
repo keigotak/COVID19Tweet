@@ -12,9 +12,9 @@ from fairseq.data import Dictionary
 from AbstractEmbedding import AbstractEmbedding
 
 
-class RobertaEmbedding(AbstractEmbedding):
+class RobertaTweetEmbedding(AbstractEmbedding):
     def __init__(self, device):
-        super(RobertaEmbedding, self).__init__(device=device)
+        super(RobertaTweetEmbedding, self).__init__(device=device)
         self.config = RobertaConfig.from_pretrained('../data/models/BERTweet_base_transformers/config.json')
         self.BERTweet = RobertaModel.from_pretrained('../data/models/BERTweet_base_transformers/model.bin', config=self.config)
         self.BERTweet.eval()  # disable dropout (or leave in train mode to finetune)
@@ -63,5 +63,5 @@ if __name__ == '__main__':
                  'Latest Updates March 20 ⚠️5274 new cases and 38 new deaths in the United States Illinois: Governo Pritzker issues "stay at home" order for all residents New York: Governor Cuomo orders 100% of all non-essential workers to stay home Penns...Source ( /coronavirus/country/us/ )',
                  '真把公主不当干部 BREAKING: 21 people on Grand Princess cruise ship docked off the California coast tested positive for coronavirus, including 19 crew members and two passengers, Vice Pres. Mike Pence says. 24 people tested negative. HTTPURL HTTPURL',
                  "SC has first two presumptive cases of coronavirus , DHEC confirms HTTPURL via @USER :cry:"]
-    emb = RobertaEmbedding(device='cuda:1')
+    emb = RobertaTweetEmbedding(device='cuda:1')
     emb(sentences)
