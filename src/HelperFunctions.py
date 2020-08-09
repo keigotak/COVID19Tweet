@@ -1,5 +1,6 @@
 import random
 import numpy as np
+import pandas as pd
 from pathlib import Path
 from datetime import datetime
 
@@ -76,6 +77,20 @@ def get_datasets():
     return modified_datasets, modes
 
 
+def get_detailed_datasets(label='created_at'):
+    with Path('../data/analytic/tweets.json').open('r', encoding='utf-8-sig') as f:
+        df = pd.read_json(f)
+    dfs = df[['text_from_dataset', 'mode', 'label', label]].values.tolist()
+    modes = get_modes()
+    datasets = {mode: [] for mode in modes}
+    labels = set()
+    for df in dfs:
+        if label == 'created_at':
+            datasets[df[1]].append([df[0], df[3].weekofyear])
+            labels.add(df[3].weekofyear)
+    return datasets, modes
+
+
 def shlink_mergefile():
     with Path("../data/models/BERTweet_base_transformers/bpe.codes").open('r', encoding='utf-8-sig') as f:
         texts = f.readlines()
@@ -133,4 +148,5 @@ class StartDate:
 
 
 if __name__ == "__main__":
-    generate_vocabjson()
+    # generate_vocabjson()
+    get_detailed_datasets(label='created_at')
