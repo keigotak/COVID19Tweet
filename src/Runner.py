@@ -105,7 +105,8 @@ class Runner:
                 self.best_results['valid_loss'] = running_loss[self.VALID_MODE]
                 best_score = self.best_results['f1']
                 torch.save(self.model.state_dict(),
-                           get_save_model_path(dir_tag=self.start_date_for_path, file_tag='{:.6f}-{:03}-{}'.format(best_score, e + 1, now_dt_for_path)))
+                           get_save_model_path(dir_tag=self.start_date_for_path,
+                                               file_tag='{:.6f}-{:03}-{}'.format(best_score, e + 1, now_dt_for_path)))
             if self.valuewatcher.is_over():
                 break
 
