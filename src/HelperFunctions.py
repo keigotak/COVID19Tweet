@@ -54,26 +54,26 @@ def get_modes():
 
 
 def get_raw_datasets():
-    tags = ['train', 'valid']
+    modes = get_modes()
     dataset_path = {'train': Path('../data/raw/train.tsv'),
                     'valid': Path('../data/raw/valid.tsv')}
     datasets = {}
-    for tag in tags:
-        with dataset_path[tag].open('r', encoding='utf-8-sig') as f:
+    for mode in modes:
+        with dataset_path[mode].open('r', encoding='utf-8-sig') as f:
             texts = f.readlines()
             headers = texts[0]
             contents = texts[1:]
-            datasets[tag] = [line.strip().split('\t') for line in contents]
-    return datasets, tags, dataset_path
+            datasets[mode] = [line.strip().split('\t') for line in contents]
+    return datasets, modes, dataset_path
 
 
 def get_datasets():
-    datasets, tags, dataset_path = get_raw_datasets()
-    modified_datasets = {tag: [] for tag in tags}
-    for tag in tags:
-        for line in datasets[tag]:
-            modified_datasets[tag].append([line[1], get_label(line[2])])
-    return modified_datasets, tags
+    datasets, modes, dataset_path = get_raw_datasets()
+    modified_datasets = {mode: [] for mode in modes}
+    for mode in modes:
+        for line in datasets[mode]:
+            modified_datasets[mode].append([line[1], get_label(line[2])])
+    return modified_datasets, modes
 
 
 def shlink_mergefile():
