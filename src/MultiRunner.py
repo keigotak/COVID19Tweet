@@ -6,13 +6,14 @@ from HelperFunctions import get_now, StartDate
 
 
 class MultiRunner:
-    def __init__(self):
+    def __init__(self, study_name='multi_run'):
         self.start_date, self.start_date_for_path = StartDate().get_instance()
         self.device = ['cuda:3', 'cuda:4']
         self.n_jobs = 4
         self.is_parallel = True
         self.semaphore = Semaphore(self.n_jobs)
         self.device_status = {device: 0 for device in self.device}
+        self.study_name = study_name
 
         self.hyper_parameter_set = [
             {'model': 'gru', 'embeddings': ['stanford', 'position', 'postag']},
@@ -92,5 +93,6 @@ class TestRunner:
 
 
 if __name__ == '__main__':
-    multirunner = MultiRunner()
+    multirunner = MultiRunner(study_name='200808')
+    # multirunner = MultiRunner(study_name='test')
     multirunner.multiple_run()
