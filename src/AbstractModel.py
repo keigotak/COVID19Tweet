@@ -5,6 +5,8 @@ from NtuaTwitterEmbedding import NtuaTwitterEmbedding
 from StanfordTwitterEmbedding import StanfordTwitterEmbedding
 from AbsolutePositionalEmbedding import AbsolutePositionalEmbedding
 from PostagEmbedding import PostagEmbedding
+from RobertaTweetEmbedding import RobertaTweetEmbedding
+from HaggingFaceEmbeddings import HaggingFaceEmbeddings
 
 
 class AbstractModel(nn.Module):
@@ -27,6 +29,10 @@ class AbstractModel(nn.Module):
             return AbsolutePositionalEmbedding(device=device)
         elif key == 'postag':
             return PostagEmbedding(device=device)
+        elif key == 'robertweet':
+            return RobertaTweetEmbedding(device=device)
+        elif key in set(HaggingFaceEmbeddings.get_model_keys()):
+            return HaggingFaceEmbeddings(device=device, model=key)
 
 
 if __name__ == '__main__':
@@ -34,6 +40,7 @@ if __name__ == '__main__':
     embs = []
     for key in ['stanford', 'position', 'postag']:
         embs.append(am.get_embeddings(key, device='cuda:2'))
+
     # sentences = ['I have a pen. I have an apple.']
     sentences = ['Official death toll from #covid19 in the United Kingdom is now GREATER than: Germany + Poland + Switzerland + Austria + Portugal + Greece + Sweden + Finland + Norway + Ireland... COMBINED. UK: 67.5 Million (233 dead) Above group: 185 Million (230 dead) HTTPURL',
                  'Dearest Mr. President @USER 1,169 coronavirus deaths in the US in 24 hours (?) Covid19 pandemic is an international crime from China - not a nature disasster! Please use your authorities to protect your people and world against China! #ChinaHasToCompensateAll',
