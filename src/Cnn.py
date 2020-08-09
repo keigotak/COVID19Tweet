@@ -3,7 +3,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from AbstractModel import AbstractModel
-from Attention import Attention
 
 
 class Cnn(AbstractModel):
