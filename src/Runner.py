@@ -44,6 +44,9 @@ class Runner:
                 loss = self.criterion(outputs, labels)
                 loss.backward()
                 running_loss[mode] += loss.item()
+
+                if self.hyper_params['gradient_clip'] != 0.0:
+                    torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.hyper_params['gradient_clip'])
                 self.optimizer.step()
 
                 self.predict_and_pool(mode=mode, outputs=outputs, x_batch=x_batch, y_batch=y_batch, e=e)
