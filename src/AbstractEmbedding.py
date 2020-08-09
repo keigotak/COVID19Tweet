@@ -9,7 +9,7 @@ class WithDelStopwords:
     def __new__(cls):
         if cls.__singleton is None:
             cls.__singleton = super(WithDelStopwords, cls).__new__(cls)
-            cls.__with_del_stopwords = True
+            cls.__with_del_stopwords = False
         return cls.__singleton
 
     def get_instance(self):
