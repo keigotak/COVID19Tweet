@@ -14,6 +14,14 @@ def set_seed(seed=97):
     torch.cuda.manual_seed(seed)
 
 
+def get_device(i):
+    if i < 0:
+        return 'cpu'
+    if ',' in i:
+        return ['cuda:{}'.format(num) for num in i.split(',')]
+    return 'cuda:{}'.format(i)
+
+
 def get_now():
     dt_now = datetime.now()
     return dt_now.strftime('%Y.%m.%d %H:%M:%S'), dt_now.strftime('%Y%m%d%H%M%S')
