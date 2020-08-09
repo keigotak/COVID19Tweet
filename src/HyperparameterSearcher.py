@@ -36,7 +36,7 @@ class HyperparameterSearcher:
 
     def objective(self, trial):
         hyper_params = self.get_hyperparameters(trial=trial)
-        runner = Runner(device=self.device, hyper_params=hyper_params)
+        runner = Runner(device=self.device, hyper_params=hyper_params, study_name=self.study_name)
         score = runner.run()
         return score
 
@@ -49,5 +49,5 @@ class HyperparameterSearcher:
 
 
 if __name__ == '__main__':
-    searcher = HyperparameterSearcher(device='cuda:2', study_name='search')
+    searcher = HyperparameterSearcher(device='cuda:2', study_name='hyp_search')
     searcher.run()
