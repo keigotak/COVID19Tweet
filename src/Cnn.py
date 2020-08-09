@@ -23,7 +23,7 @@ class Cnn(AbstractModel):
         self.dropout = nn.Dropout(hyper_params['dropout_ratio'])
         self.cnns = nn.ModuleList([nn.Conv2d(in_channels=ich, out_channels=och, kernel_size=(ws, emb_dim), stride=1, padding=(pd, 0)) for ich, och, ws, pd in zip(self.input_chs, self.output_chs, self.window_sizes, self.padding_sizes)])
 
-        self.output = nn.Linear(sum(self.output_chs), 1)
+        self.output = nn.Linear(sum(self.output_chs), hyper_params['num_class'])
 
         self.to(device)
 

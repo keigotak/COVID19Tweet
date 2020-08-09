@@ -29,7 +29,7 @@ class BiGruSelfattentionWithCheating(AbstractModel):
         self.dropout = nn.Dropout(hyper_params['dropout_ratio'])
 
         self.pooling = nn.AdaptiveAvgPool1d(1)
-        self.output = nn.Linear(emb_dim + 1, 1)
+        self.output = nn.Linear(emb_dim + 1, hyper_params['num_class'])
 
         self.to(device)
 

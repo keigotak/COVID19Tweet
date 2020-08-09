@@ -55,7 +55,8 @@ class ModelFactory:
                         'optimizer': 'sgd',
                         'embeddings': ['ntua'],
                         'model': 'gru',
-                        'seed': 0
+                        'seed': 0,
+                        'label': 'informative_or_not'
                         }
         if hyper_params['optimizer'] == 'sgd':
             hyper_params['momentum'] = 0.0
@@ -69,6 +70,12 @@ class ModelFactory:
         elif hyper_params['model'] == 'selfattentionencoder':
             hyper_params['num_head'] = 10
             hyper_params['num_layer'] = 6
+
+        if hyper_params['label'] in {'informative_or_not'}:
+            hyper_params['num_class'] = 1
+        elif hyper_params['label'] in {'created_at'}:
+            hyper_params['num_class'] = 8
+            hyper_params['lr'] = 0.1
 
         return hyper_params
 
