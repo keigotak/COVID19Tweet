@@ -17,7 +17,7 @@ class HyperparameterSearcher:
 
     def get_hyperparameters(self, trial):
         hyper_params = {}
-        hyper_params['optimizer_type'] = trial.suggest_categorical('optimizer', ['sgd', 'adam'])
+        hyper_params['optimizer_type'] = trial.suggest_categorical('optimizer_type', ['sgd', 'adam'])
         hyper_params['lr'] = trial.suggest_loguniform('lr', 1e-5, 5e-1)
         hyper_params['gradient_clip'] = trial.suggest_uniform('gradient_clip', 0.0, 5.0)
         hyper_params['weight_decay'] = trial.suggest_uniform('weight_decay', 0.0, 1.0)
