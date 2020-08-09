@@ -40,7 +40,10 @@ class Runner:
                 self.optimizer.zero_grad()
                 x_batch, y_batch = self.batchers[mode].get_batch()
                 outputs = self.model(x_batch)
-                labels = torch.Tensor(y_batch).float().unsqueeze(1).to(self.device)
+                if self.is_binary_task():
+                    labels = torch.Tensor(y_batch).float().unsqueeze(1).to(self.device)
+                else:
+                    labels = torch.Tensor(y_batch).long().to(self.device)
                 loss = self.criterion(outputs, labels)
                 loss.backward()
                 running_loss[mode] += loss.item()
@@ -52,7 +55,8 @@ class Runner:
                 self.predict_and_pool(mode=mode, outputs=outputs, x_batch=x_batch, y_batch=y_batch, e=e)
 
             metrics = get_metrics(self.poolers[mode].get('epoch{}-predicted_label'.format(e + 1)),
-                                  self.poolers[mode].get('epoch{}-y'.format(e + 1)))
+                                  self.poolers[mode].get('epoch{}-y'.format(e + 1)),
+                                  is_binary_task=self.is_binary_task())
             self.poolers[mode].set('epoch{}-metrics'.format(e + 1), metrics)
             self.poolers[mode].set('epoch{}-train_loss'.format(e + 1), running_loss[self.TRAIN_MODE])
             self.poolers[mode].set('epoch{}-valid_loss'.format(e + 1), running_loss[self.VALID_MODE])
@@ -64,14 +68,18 @@ class Runner:
                 while not self.batchers[mode].is_batch_end():
                     x_batch, y_batch = self.batchers[mode].get_batch()
                     outputs = self.model(x_batch)
-                    labels = torch.Tensor(y_batch).float().unsqueeze(1).to(self.device)
+                    if self.is_binary_task():
+                        labels = torch.Tensor(y_batch).float().unsqueeze(1).to(self.device)
+                    else:
+                        labels = torch.Tensor(y_batch).long().to(self.device)
                     loss = self.criterion(outputs, labels)
                     running_loss[mode] += loss.item()
 
                     self.predict_and_pool(mode=mode, outputs=outputs, x_batch=x_batch, y_batch=y_batch, e=e)
 
             metrics = get_metrics(self.poolers[mode].get('epoch{}-predicted_label'.format(e + 1)),
-                                  self.poolers[mode].get('epoch{}-y'.format(e + 1)))
+                                  self.poolers[mode].get('epoch{}-y'.format(e + 1)),
+                                  is_binary_task=self.is_binary_task())
             self.poolers[mode].set('epoch{}-metrics'.format(e + 1), metrics)
             self.poolers[mode].set('epoch{}-train_loss'.format(e + 1), running_loss[self.TRAIN_MODE])
             self.poolers[mode].set('epoch{}-valid_loss'.format(e + 1), running_loss[self.VALID_MODE])
