@@ -1,5 +1,5 @@
-from multiprocessing import Process, Manager
-from multiprocessing import Semaphore
+from functools import partial
+from multiprocessing import Pool, Manager
 
 from Runner import Runner
 from HelperFunctions import get_now, StartDate
@@ -48,25 +48,26 @@ class MultiRunner:
             {'model': 'cnn', 'embeddings': ['raw', 'position', 'postag']}
         ]
 
-    def single_run(self, hyper_params={}):
-        self.semaphore.acquire()
+    def single_run(self, lock=None, hyper_params={}):
+        if lock is not None:
+            lock.acquire()
         device = self.get_device()
-        runner = Runner(device=device, hyper_params=hyper_params)
+        if lock is not None:
+            lock.release()
+        runner = Runner(device=device, hyper_params=hyper_params, study_name=self.study_name)
+        # runner = TestModel(device=device, hyper_params=hyper_params, study_name=self.study_name)
         runner.run()
         self.release_device(device)
-        self.semaphore.release()
 
     def multiple_run(self):
         if self.is_parallel:
             with Manager() as manager:
                 self.device_status = manager.dict(self.device_status)
-                all_processes = []
-                for hyper_params in self.hyper_parameter_set:
-                    p = Process(target=self.single_run, args=(hyper_params,))
-                    all_processes.append(p)
-                    p.start()
-                for p in all_processes:
-                    p.join()
+                lock = manager.Lock()
+                func = partial(self.single_run, lock)
+                with Pool(processes=self.n_jobs) as pool:
+                    for _ in pool.map(func, [hyper_params for hyper_params in self.hyper_parameter_set]):
+                        pass
         else:
             for hyper_params in self.hyper_parameter_set:
                 self.single_run(hyper_params=hyper_params)
