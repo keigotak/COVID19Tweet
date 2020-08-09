@@ -1,7 +1,8 @@
 import torch.nn as nn
 
 from Batcher import Batcher
-from Dataset import Dataset
+from Dataset import Dataset, DetailedDataset
+from HelperFunctions import get_modes
 
 
 class Factory:
