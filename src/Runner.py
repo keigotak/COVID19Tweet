@@ -12,7 +12,7 @@ from ModelFactory import ModelFactory
 
 
 class Runner:
-    def __init__(self, device='cuda:0', hyper_params={}):
+    def __init__(self, device='cuda:0', hyper_params={}, study_name=''):
         self.device = device
         factory = ModelFactory(device=self.device, hyper_params=hyper_params)
         factory_items = factory.generate()
@@ -25,6 +25,7 @@ class Runner:
         self.best_results = {}
         self.hyper_params = factory.hyper_params
         self.start_date, self.start_date_for_path = StartDate().get_instance()
+        self.study_name = study_name
 
     def run(self):
         best_score = 0.0
@@ -118,7 +119,7 @@ class Runner:
         return hyper_params
 
     def export_results(self):
-        path = get_results_path('hyp')
+        path = get_results_path(self.study_name)
         while True:
             try:
                 with path.open('a', encoding='utf-8-sig') as f:
@@ -137,7 +138,8 @@ class Runner:
             logits = self.poolers[mode].get(e + '-logits')
             preds = self.poolers[mode].get(e + '-preds')
             predicted_labels = self.poolers[mode].get(e + '-predicted_label')
-            with get_details_path(tag=self.start_date_for_path + '-{}-{}'.format(e, mode)).open('w', encoding='utf-8-sig') as f:
+            with get_details_path(tag='{}-{}-{}-{}'.format(self.start_date_for_path, self.study_name, e, mode))\
+                    .open('w', encoding='utf-8-sig') as f:
                 for x, y, logit, pred, plabel in zip(xs, ys, logits, preds, predicted_labels):
                     f.write('\t'.join(list(map(str, [x, y, logit, pred, plabel]))))
                     f.write('\n')
