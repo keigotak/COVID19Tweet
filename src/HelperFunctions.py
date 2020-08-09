@@ -49,6 +49,10 @@ def get_label(text):
         return None
 
 
+def get_modes():
+    return ['train', 'valid']
+
+
 def get_raw_datasets():
     tags = ['train', 'valid']
     dataset_path = {'train': Path('../data/raw/train.tsv'),
