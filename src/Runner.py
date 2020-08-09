@@ -55,6 +55,7 @@ class Runner:
                 self.predict_and_pool(mode=mode, outputs=outputs, x_batch=x_batch, y_batch=y_batch, e=e)
 
             metrics = get_metrics(self.poolers[mode].get('epoch{}-predicted_label'.format(e + 1)),
+                                  self.poolers[mode].get('epoch{}-preds'.format(e + 1)),
                                   self.poolers[mode].get('epoch{}-y'.format(e + 1)),
                                   is_binary_task=self.is_binary_task())
             self.poolers[mode].set('epoch{}-metrics'.format(e + 1), metrics)
@@ -78,6 +79,7 @@ class Runner:
                     self.predict_and_pool(mode=mode, outputs=outputs, x_batch=x_batch, y_batch=y_batch, e=e)
 
             metrics = get_metrics(self.poolers[mode].get('epoch{}-predicted_label'.format(e + 1)),
+                                  self.poolers[mode].get('epoch{}-preds'.format(e + 1)),
                                   self.poolers[mode].get('epoch{}-y'.format(e + 1)),
                                   is_binary_task=self.is_binary_task())
             self.poolers[mode].set('epoch{}-metrics'.format(e + 1), metrics)
