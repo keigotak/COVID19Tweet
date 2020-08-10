@@ -102,6 +102,7 @@ class Runner:
             if self.valuewatcher.is_updated() or e == 0:
                 self.best_results = metrics
                 self.best_results['date'] = now_dt
+                self.best_results['date_dir'] = now_dt_for_path
                 self.best_results['epoch'] = e + 1
                 self.best_results['train_loss'] = running_loss[self.TRAIN_MODE]
                 self.best_results['valid_loss'] = running_loss[self.VALID_MODE]
@@ -156,7 +157,7 @@ class Runner:
                     f.write(','.join([os.path.basename(__file__)]
                                      + [str(self.best_results[key]) for key in ['date', 'epoch', 'train_loss',
                                                                                 'valid_loss'] + get_print_keys()]
-                                     + [hyper_params]))
+                                     + [hyper_params, self.best_results['date_dir']]))
                     f.write('\n')
                     break
             except IOError:
@@ -170,7 +171,7 @@ class Runner:
             logits = self.poolers[mode].get(e + '-logits')
             preds = self.poolers[mode].get(e + '-preds')
             predicted_labels = self.poolers[mode].get(e + '-predicted_label')
-            with get_details_path(tag='{}-{}-{}-{}'.format(self.start_date_for_path, self.study_name, e, mode))\
+            with get_details_path(tag='{}-{}-{}-{}-{}'.format(self.start_date_for_path, self.best_results['date_dir'], self.study_name, e, mode))\
                     .open('w', encoding='utf-8-sig') as f:
                 for x, y, logit, pred, plabel in zip(xs, ys, logits, preds, predicted_labels):
                     f.write('\t'.join(list(map(str, [x, y, logit, pred, plabel]))))
