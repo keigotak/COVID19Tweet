@@ -41,9 +41,9 @@ class HaggingFaceEmbeddings(AbstractEmbedding):
             assert '{} is not in keys'.format(model)
 
 
-        self.pretrained_weights = MODELS[model][2]
-        self.tokenizer = MODELS[model][1].from_pretrained(self.pretrained_weights)
-        self.model = MODELS[model][0].from_pretrained(self.pretrained_weights)
+        self.model_name = MODELS[model][2]
+        self.tokenizer = MODELS[model][1].from_pretrained(self.model_name)
+        self.model = MODELS[model][0].from_pretrained(self.model_name)
         self.model.eval()  # disable dropout (or leave in train mode to finetune)
         self.model.to(self.device)
         self.pad_token_id = self.tokenizer.pad_token_id
