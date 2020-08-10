@@ -16,9 +16,9 @@ class RobertaTweetEmbedding(AbstractEmbedding):
     def __init__(self, device):
         super(RobertaTweetEmbedding, self).__init__(device=device)
         self.config = RobertaConfig.from_pretrained('../data/models/BERTweet_base_transformers/config.json')
-        self.BERTweet = RobertaModel.from_pretrained('../data/models/BERTweet_base_transformers/model.bin', config=self.config)
-        self.BERTweet.eval()  # disable dropout (or leave in train mode to finetune)
-        self.BERTweet.to(self.device)
+        self.model = RobertaModel.from_pretrained('../data/models/BERTweet_base_transformers/model.bin', config=self.config)
+        self.model.eval()  # disable dropout (or leave in train mode to finetune)
+        self.model.to(self.device)
         self.pad_token_id = self.config.pad_token_id
 
         # Load BPE encoder
@@ -52,7 +52,7 @@ class RobertaTweetEmbedding(AbstractEmbedding):
 
         # Extract features
         with torch.no_grad():
-            features = self.BERTweet(torch.tensor([pad_all_input_ids], dtype=torch.long).squeeze(0).to(self.device))
+            features = self.model(torch.tensor([pad_all_input_ids], dtype=torch.long).squeeze(0).to(self.device))
 
         return features[0]
 
