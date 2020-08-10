@@ -47,6 +47,7 @@ class HaggingFaceEmbeddings(AbstractEmbedding):
         self.model.eval()  # disable dropout (or leave in train mode to finetune)
         self.model.to(self.device)
         self.pad_token_id = self.tokenizer.pad_token_id
+        self.embedding_dim = self.model.config.hidden_size
 
         parser = argparse.ArgumentParser()
         parser.add_argument('--bpe-codes',
@@ -57,6 +58,7 @@ class HaggingFaceEmbeddings(AbstractEmbedding):
                             )
         args = parser.parse_args()
         self.bpe = fastBPE(args)
+        self.max_seq_length = 256
 
     def forward(self, sentences):
         with_bpe = False
