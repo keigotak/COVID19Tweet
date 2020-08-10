@@ -54,9 +54,9 @@ class Runner:
 
                 self.predict_and_pool(mode=mode, outputs=outputs, x_batch=x_batch, y_batch=y_batch, e=e)
 
-            metrics = get_metrics(self.poolers[mode].get('epoch{}-predicted_label'.format(e + 1)),
-                                  self.poolers[mode].get('epoch{}-preds'.format(e + 1)),
-                                  self.poolers[mode].get('epoch{}-y'.format(e + 1)),
+            metrics = get_metrics(predicted_label=self.poolers[mode].get('epoch{}-predicted_label'.format(e + 1)),
+                                  predicted_score=self.poolers[mode].get('epoch{}-preds'.format(e + 1)),
+                                  labels=self.poolers[mode].get('epoch{}-y'.format(e + 1)),
                                   is_binary_task=self.is_binary_task())
             self.poolers[mode].set('epoch{}-metrics'.format(e + 1), metrics)
             self.poolers[mode].set('epoch{}-train_loss'.format(e + 1), running_loss[self.TRAIN_MODE])
@@ -78,9 +78,9 @@ class Runner:
 
                     self.predict_and_pool(mode=mode, outputs=outputs, x_batch=x_batch, y_batch=y_batch, e=e)
 
-            metrics = get_metrics(self.poolers[mode].get('epoch{}-predicted_label'.format(e + 1)),
-                                  self.poolers[mode].get('epoch{}-preds'.format(e + 1)),
-                                  self.poolers[mode].get('epoch{}-y'.format(e + 1)),
+            metrics = get_metrics(predicted_label=self.poolers[mode].get('epoch{}-predicted_label'.format(e + 1)),
+                                  predicted_score=self.poolers[mode].get('epoch{}-preds'.format(e + 1)),
+                                  labels=self.poolers[mode].get('epoch{}-y'.format(e + 1)),
                                   is_binary_task=self.is_binary_task())
             self.poolers[mode].set('epoch{}-metrics'.format(e + 1), metrics)
             self.poolers[mode].set('epoch{}-train_loss'.format(e + 1), running_loss[self.TRAIN_MODE])
