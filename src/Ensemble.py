@@ -64,7 +64,11 @@ def save_table(table, tag='tmp'):
 
 def main():
     table = get_ensemble_table()
-    save_table(table, tag='ens1')
+    y_preds = [1 if float(line[0]) > 0.5 else 0 for line in table]
+    y_label = [int(line[2]) for line in table]
+    metrics = get_metrics(predicted_label=y_preds, labels=y_label)
+    print(metrics)
+    # save_table(table, tag='ens1')
 
 
 if __name__ == '__main__':
