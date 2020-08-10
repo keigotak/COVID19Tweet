@@ -12,7 +12,7 @@ class MultiLayerPerceptron(AbstractModel):
 
         emb_dim = sum([item.embedding_dim for item in self.embeddings])
         self.hidden_size = emb_dim
-        self.max_sentence_length = 140
+        self.max_sentence_length = 256
 
         self.in_dimensions = [self.max_sentence_length * emb_dim, 1024, 256]
         self.out_dimensions = [1024, 256, 64]
@@ -26,9 +26,11 @@ class MultiLayerPerceptron(AbstractModel):
     def forward(self, batch_sentence):
         embeddings = [embedding(batch_sentence) for embedding in self.embeddings]
         embeddings = torch.cat(embeddings, dim=2)
+        if embeddings.shape[1] < self.max_sentence_length:
+            embeddings = torch.cat((embeddings, torch.zeros(embeddings.shape[0], self.max_sentence_length - embeddings.shape[1], self.hidden_size).to(self.device)), dim=1)
+        elif embeddings.shape[1] > self.max_sentence_length:
+            embeddings = embeddings.narrow(1, 0, self.max_sentence_length)
         embeddings = embeddings.view(embeddings.shape[0], -1)
-        if embeddings.shape[1] < self.in_dimensions[0]:
-            embeddings = torch.cat((embeddings, torch.zeros(embeddings.shape[0], self.in_dimensions[0] - embeddings.shape[1]).to(self.device)), dim=1)
 
         feature_maps = embeddings
         for layer in self.layers:
