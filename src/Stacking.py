@@ -72,7 +72,7 @@ lgbm = lightgbm.LGBMClassifier(random_state=random_state)
 lgbm.fit(y=y_train, X=X_train, feature_name=feature_names)
 
 
-metrics = get_metrics(lgbm.predict(X=X_test),  y_test)
+metrics = get_metrics(predicted_label=lgbm.predict(X=X_test),  labels=y_test)
 print(metrics)
 print(f1_score(y_true=y_test, y_pred=lgbm.predict(X=X_test)))
 
