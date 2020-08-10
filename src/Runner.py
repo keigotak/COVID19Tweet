@@ -177,33 +177,6 @@ class Runner:
                     f.write('\t'.join(list(map(str, [x, y, logit, pred, plabel]))))
                     f.write('\n')
 
-        start = time.time()
-        while True:
-            try:
-                with get_details_path(tag='{}'.format(self.study_name)).open('a', encoding='utf-8-sig') as f:
-                    hyper_params = self.to_string_hyper_params()
-                    f.write(
-                        ','.join(
-                            [os.path.basename(__file__), self.start_date]
-                            + [str(self.best_results[key]) for key in ['date', 'epoch', 'train_loss',
-                                                                       'valid_loss'] + get_print_keys()]
-                            + [hyper_params]))
-                    f.write('\n')
-                    break
-            except IOError:
-                if start - time.time() > 60.1:
-                    with get_details_path(tag='{}-sub'.format(self.study_name)).open('a', encoding='utf-8-sig') as f:
-                        hyper_params = self.to_string_hyper_params()
-                        f.write(
-                            ','.join(
-                                [os.path.basename(__file__), self.start_date]
-                                + [str(self.best_results[key]) for key in ['date', 'epoch', 'train_loss',
-                                                                           'valid_loss'] + get_print_keys()]
-                                + [hyper_params]))
-                        f.write('\n')
-                    break
-                time.sleep(0.5)
-
 
 if __name__ == '__main__':
     runner = Runner(device='cuda:0')
