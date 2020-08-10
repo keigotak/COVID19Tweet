@@ -20,6 +20,7 @@ class RobertaTweetEmbedding(AbstractEmbedding):
         self.model.eval()  # disable dropout (or leave in train mode to finetune)
         self.model.to(self.device)
         self.pad_token_id = self.config.pad_token_id
+        self.embedding_dim = self.model.config.hidden_size
 
         # Load BPE encoder
         parser = argparse.ArgumentParser()
