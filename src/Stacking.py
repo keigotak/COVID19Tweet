@@ -14,11 +14,18 @@ random_state = 97
 
 def get_path(mode='train'):
     base_path = Path('../data/results/details')
-    files = [
-        'details-20200731220126-epoch1.csv',
-        'details-20200731220448-epoch1.csv',
-        'details-20200731220708-epoch1.csv'
-    ]
+
+    tag = '200808'
+    files = [item.name for item in base_path.glob('*-{}-*{}*'.format(tag, mode))]
+
+    tag = 'haggingface_gru'
+    files = [item.name for item in base_path.glob('*-{}-*{}*'.format(tag, mode))] + files
+
+    # files = [
+    #     'details-20200801230929-epoch17-{}.csv'.format(mode),
+    #     'details-20200801235018-epoch11-{}.csv'.format(mode),
+    #     'details-20200801235056-epoch19-{}.csv'.format(mode)
+    # ]
     return base_path, files
 
 
@@ -59,7 +66,8 @@ def get_data(mode='train'):
 X_train, y_train = get_data(mode='train')
 X_test, y_test = get_data(mode='valid')
 
-feature_names = ['model1', 'model2', 'model3']
+_, files = get_path('train')
+feature_names = files
 lgbm = lightgbm.LGBMClassifier(random_state=random_state)
 lgbm.fit(y=y_train, X=X_train, feature_name=feature_names)
 
