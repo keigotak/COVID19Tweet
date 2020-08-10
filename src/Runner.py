@@ -12,7 +12,7 @@ from ModelFactory import ModelFactory
 
 
 class Runner:
-    def __init__(self, device='cuda:0', hyper_params={}, study_name=''):
+    def __init__(self, device='cuda:0', hyper_params={}, study_name='test'):
         self.device = device
         factory = ModelFactory(device=self.device, hyper_params=hyper_params)
         factory_items = factory.generate()
