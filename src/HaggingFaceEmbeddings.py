@@ -113,5 +113,7 @@ if __name__ == '__main__':
                  '真把公主不当干部 BREAKING: 21 people on Grand Princess cruise ship docked off the California coast tested positive for coronavirus, including 19 crew members and two passengers, Vice Pres. Mike Pence says. 24 people tested negative. HTTPURL HTTPURL',
                  "SC has first two presumptive cases of coronavirus , DHEC confirms HTTPURL via @USER :cry:"]
     for model in HaggingFaceEmbeddings.get_model_keys():
-        emb = HaggingFaceEmbeddings(device='cuda:1', model=model)
-        emb(sentences)
+        emb = HaggingFaceEmbeddings(device='cuda:0', model=model)
+        print(emb(sentences).shape[0])
+        del emb
+        # break
