@@ -77,7 +77,19 @@ class HaggingFaceEmbeddings(AbstractEmbedding):
         else:
             if self.tokenizer.pad_token is None:
                 self.tokenizer.pad_token = '<pad>'
-            pad_all_input_ids = self.tokenizer(sentences, padding=True, truncation=True, return_tensors="pt").data['input_ids']
+            if self.model_name == 'transfo-xl-wt103':
+                pad_all_input_ids = self.tokenizer(sentences,
+                                                   padding=True,
+                                                   truncation=True,
+                                                   max_length=self.max_seq_length,
+                                                   add_space_before_punct_symbol=True,
+                                                   return_tensors="pt").data['input_ids']
+            else:
+                pad_all_input_ids = self.tokenizer(sentences,
+                                                   padding=True,
+                                                   truncation=True,
+                                                   max_length=self.max_seq_length,
+                                                   return_tensors="pt").data['input_ids']
 
         # Extract features
         with torch.no_grad():
