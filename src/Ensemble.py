@@ -1,5 +1,6 @@
 from pathlib import Path
 from statistics import mean
+from Metrics import get_metrics
 
 
 def get_path():
