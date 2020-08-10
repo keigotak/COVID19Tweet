@@ -3,13 +3,19 @@ from statistics import mean
 from Metrics import get_metrics
 
 
-def get_path():
+def get_path(mode='valid'):
     base_path = Path('../data/results/details')
-    files = [
-        'details-20200731220126-epoch1.csv',
-        'details-20200731220448-epoch1.csv',
-        'details-20200731220708-epoch1.csv'
-    ]
+    tag = '200808'
+    files = [item.name for item in base_path.glob('*-{}-*{}*'.format(tag, mode))]
+
+    tag = 'haggingface_gru'
+    files = [item.name for item in base_path.glob('*-{}-*{}*'.format(tag, mode))] + files
+
+    # files = [
+    #     'details-20200801230929-epoch17-train.csv',
+    #     'details-20200801235018-epoch11-train.csv',
+    #     'details-20200801235056-epoch19-train.csv'
+    # ]
     return base_path, files
 
 
