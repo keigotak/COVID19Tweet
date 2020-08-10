@@ -1,13 +1,16 @@
 from sklearn.metrics import confusion_matrix, roc_auc_score, roc_curve, auc
 
 
-def get_metrics(predicted_label, predicted_score, labels, is_binary_task=True):
+def get_metrics(predicted_label, labels, predicted_score=None, is_binary_task=True):
 
     if is_binary_task:
         tp, fp, fn, tn = get_confusion_matrix(predicted_label, labels)
         roc_auc = roc_auc_score(y_true=labels, y_score=predicted_label)
-        fpr, tpr, thresholds = roc_curve(labels, predicted_score, pos_label=1)
-        pr_auc = auc(fpr, tpr)
+        if predicted_score is not None:
+            fpr, tpr, thresholds = roc_curve(labels, predicted_score, pos_label=1)
+            pr_auc = auc(fpr, tpr)
+        else:
+            pr_auc = 0.0
     else:
         tp, fp, fn, tn = 0, 0, 0, 0
         rets = confusion_matrix(y_true=labels, y_pred=predicted_label)
@@ -18,8 +21,8 @@ def get_metrics(predicted_label, predicted_score, labels, is_binary_task=True):
                 else:
                     fn += item
                     fp += item
-        roc_auc = '-'
-        pr_auc = '-'
+        roc_auc = 0.0
+        pr_auc = 0.0
 
     accuracy = 0.0 if (tp + fp + fn + tn) == 0 else (tp + tn) / (tp + fp + fn + tn)
     precision = 0.0 if (tp + fp) == 0 else tp / (tp + fp)
@@ -52,7 +55,7 @@ if __name__ == '__main__':
     y_true = [0, 0, 0, 0, 0, 1, 1, 1, 1, 1]
     y_pred = [0, 1, 1, 1, 1, 0, 0, 0, 1, 1]
     y_pred_scores = [0.1, 0.6, 0.65, 0.9, 0.78, 0.21, 0.13, 0.45, 0.95, 0.7]
-    rets = get_metrics(y_pred, y_pred_scores, y_true)
+    rets = get_metrics(y_pred, y_true, y_pred_scores)
     print(rets)
     assert rets['tp'] == 2
     assert rets['tn'] == 1
