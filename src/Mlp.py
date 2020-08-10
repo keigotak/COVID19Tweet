@@ -4,7 +4,7 @@ import torch.nn as nn
 from AbstractModel import AbstractModel
 
 
-class MultiLayerPerceptron(AbstractModel):
+class Mlp(AbstractModel):
     def __init__(self, device='cpu', hyper_params=None):
         sup = super()
         sup.__init__(device=device, hyper_params=hyper_params)

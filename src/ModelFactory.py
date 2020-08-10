@@ -7,7 +7,7 @@ from BiGruSelfattention import BiGruSelfattention
 from BiGruSelfattentionWithCheating import BiGruSelfattentionWithCheating
 from Cnn import Cnn
 from SelfattentionEncoder import SelfattentionEncoder
-from MultiLayerPerceptron import MultiLayerPerceptron
+from Mlp import Mlp
 from HelperFunctions import set_seed
 
 
@@ -34,7 +34,7 @@ class ModelFactory:
         elif self.hyper_params['model'] == 'selfattentionencoder':
             self.model = SelfattentionEncoder(device=self.device, hyper_params=self.hyper_params)
         elif self.hyper_params['model'] == 'mlp':
-            self.model = MultiLayerPerceptron(device=self.device, hyper_params=self.hyper_params)
+            self.model = Mlp(device=self.device, hyper_params=self.hyper_params)
         else:
             self.model = None
         print(self.model)
